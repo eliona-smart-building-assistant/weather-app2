@@ -16,9 +16,9 @@
 package main
 
 import (
-	"app-name/app"
-	dbhelper "app-name/db/helper"
 	"time"
+	"weather-app2/app"
+	dbhelper "weather-app2/db/helper"
 
 	elionaapp "github.com/eliona-smart-building-assistant/go-eliona/app"
 	"github.com/eliona-smart-building-assistant/go-utils/common"

@@ -16,10 +16,10 @@
 package eliona
 
 import (
-	appmodel "app-name/app/model"
-	conf "app-name/db/helper"
 	"context"
 	"fmt"
+	appmodel "weather-app2/app/model"
+	conf "weather-app2/db/helper"
 
 	"github.com/eliona-smart-building-assistant/go-eliona/utils"
 	"github.com/eliona-smart-building-assistant/go-utils/common"
@@ -59,7 +59,7 @@ func (d *ExampleDevice) GetDescription() string {
 }
 
 func (d *ExampleDevice) GetAssetType() string {
-	return "app_schema_name_device"
+	return "weather_app_device"
 }
 
 func (d *ExampleDevice) GetGAI() string {
@@ -96,15 +96,15 @@ type Root struct {
 }
 
 func (r *Root) GetName() string {
-	return "app_schema_name"
+	return "weather_app"
 }
 
 func (r *Root) GetDescription() string {
-	return "Root asset for App Name devices"
+	return "Root asset for Weather App"
 }
 
 func (r *Root) GetAssetType() string {
-	return "app_schema_name_root"
+	return "weather_app_root"
 }
 
 func (r *Root) GetGAI() string {

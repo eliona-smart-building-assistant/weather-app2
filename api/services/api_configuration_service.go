@@ -16,14 +16,14 @@
 package apiservices
 
 import (
-	apiserver "app-name/api/generated"
-	appmodel "app-name/app/model"
-	"app-name/broker"
-	dbhelper "app-name/db/helper"
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	apiserver "weather-app2/api/generated"
+	appmodel "weather-app2/app/model"
+	"weather-app2/broker"
+	dbhelper "weather-app2/db/helper"
 )
 
 // ConfigurationAPIService is a service that implements the logic for the ConfigurationAPIServicer

@@ -16,13 +16,13 @@
 package apiservices
 
 import (
-	apiserver "app-name/api/generated"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	apiserver "weather-app2/api/generated"
 
 	"github.com/eliona-smart-building-assistant/go-utils/common"
 	"github.com/eliona-smart-building-assistant/go-utils/log"

@@ -16,19 +16,19 @@
 package dbhelper
 
 import (
-	appmodel "app-name/app/model"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	appmodel "weather-app2/app/model"
 
 	"github.com/eliona-smart-building-assistant/go-eliona/frontend"
 	"github.com/eliona-smart-building-assistant/go-utils/log"
 	"github.com/lib/pq"
 
-	"app-name/db/generated/postgres/app_schema_name/model"
-	. "app-name/db/generated/postgres/app_schema_name/table"
+	"weather-app2/db/generated/postgres/weather_app/model"
+	. "weather-app2/db/generated/postgres/weather_app/table"
 
 	. "github.com/go-jet/jet/v2/postgres"
 )

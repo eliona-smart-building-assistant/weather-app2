@@ -11,7 +11,7 @@ import (
 	"github.com/go-jet/jet/v2/postgres"
 )
 
-var Asset = newAssetTable("app_schema_name", "asset", "")
+var Asset = newAssetTable("weather_app", "asset", "")
 
 type assetTable struct {
 	postgres.Table

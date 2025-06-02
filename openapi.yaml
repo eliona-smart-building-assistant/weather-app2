@@ -17,17 +17,17 @@ openapi: 3.0.3
 
 info:
   version: 1.0.0
-  title: App Name app API
-  description: API to access and configure the App Name app
+  title: Weather app API
+  description: API to access and configure the Weather app
 externalDocs:
-  description: Find out more about the App Name app
-  url: https://doc.eliona.io/collection/eliona-english/eliona-apps/apps/app-name
+  description: Find out more about the Weather app
+  url: https://doc.eliona.io/collection/eliona-english/eliona-apps/apps/weather-app
 servers:
   - url: "https://{server}/v1"
     variables:
       server:
-        default: app-name
-  - url: "https://{environment}.eliona.io/apps/app-name/api/v1"
+        default: weather-app2
+  - url: "https://{environment}.eliona.io/apps/weather-app2/api/v1"
     variables:
       environment:
         default: name
@@ -36,17 +36,17 @@ tags:
   - name: Configuration
     description: Configure the app
     externalDocs:
-      url: https://github.com/eliona-smart-building-assistant/app-name-app
+      url: https://github.com/eliona-smart-building-assistant/weather-app2-app
 
   - name: Version
     description: API version
     externalDocs:
-      url: https://github.com/eliona-smart-building-assistant/app-name-app
+      url: https://github.com/eliona-smart-building-assistant/weather-app2-app
 
   - name: Customization
     description: Help to customize Eliona environment
     externalDocs:
-      url: https://github.com/eliona-smart-building-assistant/app-name-app
+      url: https://github.com/eliona-smart-building-assistant/weather-app2-app
 
 paths:
   /configs:
@@ -262,7 +262,7 @@ components:
           nullable: true
         projectIDs:
           type: array
-          description: List of Eliona project ids for which this device should collect data. For each project id all smart devices are automatically created as an asset in Eliona. The mapping between Eliona is stored as an asset mapping in the App Name app.
+          description: List of Eliona project ids for which this device should collect data. For each project id all smart devices are automatically created as an asset in Eliona. The mapping between Eliona is stored as an asset mapping in the Weather app.
           nullable: true
           items:
             type: string

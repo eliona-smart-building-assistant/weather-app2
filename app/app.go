@@ -16,17 +16,17 @@
 package app
 
 import (
-	apiserver "app-name/api/generated"
-	apiservices "app-name/api/services"
-	appmodel "app-name/app/model"
-	dbhelper "app-name/db/helper"
-	"app-name/eliona"
 	"context"
 	"errors"
 	"net/http"
 	"reflect"
 	"sync"
 	"time"
+	apiserver "weather-app2/api/generated"
+	apiservices "weather-app2/api/services"
+	appmodel "weather-app2/app/model"
+	dbhelper "weather-app2/db/helper"
+	"weather-app2/eliona"
 
 	api "github.com/eliona-smart-building-assistant/go-eliona-api-client/v2"
 	"github.com/eliona-smart-building-assistant/go-eliona/app"

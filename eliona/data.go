@@ -16,16 +16,16 @@
 package eliona
 
 import (
-	appmodel "app-name/app/model"
 	"fmt"
 	"time"
+	appmodel "weather-app2/app/model"
 
 	api "github.com/eliona-smart-building-assistant/go-eliona-api-client/v2"
 	"github.com/eliona-smart-building-assistant/go-eliona/asset"
 	"github.com/eliona-smart-building-assistant/go-utils/log"
 )
 
-const ClientReference string = "app-name"
+const ClientReference string = "weather-app2"
 
 func UpsertAssetData(config appmodel.Configuration, assets []ExampleDevice) error {
 	for _, projectId := range config.ProjectIDs {
