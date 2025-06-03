@@ -75,10 +75,9 @@ func UpsertConfig(ctx context.Context, config appmodel.Configuration) (appmodel.
 	}
 
 	commonColumns := ColumnList{
-		Configuration.APIAccessChangeMe,
+		Configuration.APIKey,
 		Configuration.RefreshInterval,
 		Configuration.RequestTimeout,
-		Configuration.AssetFilter,
 		Configuration.Active,
 		Configuration.Enable,
 		Configuration.ProjectIds,
@@ -86,7 +85,7 @@ func UpsertConfig(ctx context.Context, config appmodel.Configuration) (appmodel.
 	}
 
 	commonValues := []interface{}{
-		config.ApiAccessChangeMe,
+		config.ApiKey,
 		config.RefreshInterval,
 		config.RequestTimeout,
 		Json(af),
@@ -107,10 +106,9 @@ func UpsertConfig(ctx context.Context, config appmodel.Configuration) (appmodel.
 			Configuration.ID,
 		).DO_UPDATE(
 			SET(
-				Configuration.APIAccessChangeMe.SET(Configuration.EXCLUDED.APIAccessChangeMe),
+				Configuration.APIKey.SET(Configuration.EXCLUDED.APIKey),
 				Configuration.RefreshInterval.SET(Configuration.EXCLUDED.RefreshInterval),
 				Configuration.RequestTimeout.SET(Configuration.EXCLUDED.RequestTimeout),
-				Configuration.AssetFilter.SET(Configuration.EXCLUDED.AssetFilter),
 				Configuration.Active.SET(Configuration.EXCLUDED.Active),
 				Configuration.Enable.SET(Configuration.EXCLUDED.Enable),
 				Configuration.ProjectIds.SET(Configuration.EXCLUDED.ProjectIds),
@@ -276,22 +274,15 @@ func GetAssetById(assetId int32) (appmodel.Asset, error) {
 }
 
 func toAppConfig(dbCfg model.Configuration) (appmodel.Configuration, error) {
-	var assetFilter [][]appmodel.FilterRule
-	err := json.Unmarshal([]byte(dbCfg.AssetFilter), &assetFilter)
-	if err != nil {
-		return appmodel.Configuration{}, err
-	}
-
 	return appmodel.Configuration{
-		Id:                dbCfg.ID,
-		ApiAccessChangeMe: dbCfg.APIAccessChangeMe,
-		RefreshInterval:   dbCfg.RefreshInterval,
-		RequestTimeout:    dbCfg.RequestTimeout,
-		AssetFilter:       assetFilter,
-		Active:            dbCfg.Active,
-		Enable:            dbCfg.Enable,
-		ProjectIDs:        dbCfg.ProjectIds,
-		UserId:            dbCfg.UserID,
+		Id:              dbCfg.ID,
+		ApiKey:          dbCfg.APIKey,
+		RefreshInterval: dbCfg.RefreshInterval,
+		RequestTimeout:  dbCfg.RequestTimeout,
+		Active:          dbCfg.Active,
+		Enable:          dbCfg.Enable,
+		ProjectIDs:      dbCfg.ProjectIds,
+		UserId:          dbCfg.UserID,
 	}, nil
 }
 

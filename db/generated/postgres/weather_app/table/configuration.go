@@ -17,15 +17,14 @@ type configurationTable struct {
 	postgres.Table
 
 	// Columns
-	ID                postgres.ColumnInteger
-	APIAccessChangeMe postgres.ColumnString
-	RefreshInterval   postgres.ColumnInteger
-	RequestTimeout    postgres.ColumnInteger
-	AssetFilter       postgres.ColumnString
-	Active            postgres.ColumnBool
-	Enable            postgres.ColumnBool
-	ProjectIds        postgres.ColumnString
-	UserID            postgres.ColumnString
+	ID              postgres.ColumnInteger
+	APIKey          postgres.ColumnString
+	RefreshInterval postgres.ColumnInteger
+	RequestTimeout  postgres.ColumnInteger
+	Active          postgres.ColumnBool
+	Enable          postgres.ColumnBool
+	ProjectIds      postgres.ColumnString
+	UserID          postgres.ColumnString
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -67,33 +66,31 @@ func newConfigurationTable(schemaName, tableName, alias string) *ConfigurationTa
 
 func newConfigurationTableImpl(schemaName, tableName, alias string) configurationTable {
 	var (
-		IDColumn                = postgres.IntegerColumn("id")
-		APIAccessChangeMeColumn = postgres.StringColumn("api_access_change_me")
-		RefreshIntervalColumn   = postgres.IntegerColumn("refresh_interval")
-		RequestTimeoutColumn    = postgres.IntegerColumn("request_timeout")
-		AssetFilterColumn       = postgres.StringColumn("asset_filter")
-		ActiveColumn            = postgres.BoolColumn("active")
-		EnableColumn            = postgres.BoolColumn("enable")
-		ProjectIdsColumn        = postgres.StringColumn("project_ids")
-		UserIDColumn            = postgres.StringColumn("user_id")
-		allColumns              = postgres.ColumnList{IDColumn, APIAccessChangeMeColumn, RefreshIntervalColumn, RequestTimeoutColumn, AssetFilterColumn, ActiveColumn, EnableColumn, ProjectIdsColumn, UserIDColumn}
-		mutableColumns          = postgres.ColumnList{APIAccessChangeMeColumn, RefreshIntervalColumn, RequestTimeoutColumn, AssetFilterColumn, ActiveColumn, EnableColumn, ProjectIdsColumn, UserIDColumn}
-		defaultColumns          = postgres.ColumnList{IDColumn, RefreshIntervalColumn, RequestTimeoutColumn, ActiveColumn, EnableColumn}
+		IDColumn              = postgres.IntegerColumn("id")
+		APIKeyColumn          = postgres.StringColumn("api_key")
+		RefreshIntervalColumn = postgres.IntegerColumn("refresh_interval")
+		RequestTimeoutColumn  = postgres.IntegerColumn("request_timeout")
+		ActiveColumn          = postgres.BoolColumn("active")
+		EnableColumn          = postgres.BoolColumn("enable")
+		ProjectIdsColumn      = postgres.StringColumn("project_ids")
+		UserIDColumn          = postgres.StringColumn("user_id")
+		allColumns            = postgres.ColumnList{IDColumn, APIKeyColumn, RefreshIntervalColumn, RequestTimeoutColumn, ActiveColumn, EnableColumn, ProjectIdsColumn, UserIDColumn}
+		mutableColumns        = postgres.ColumnList{APIKeyColumn, RefreshIntervalColumn, RequestTimeoutColumn, ActiveColumn, EnableColumn, ProjectIdsColumn, UserIDColumn}
+		defaultColumns        = postgres.ColumnList{IDColumn, RefreshIntervalColumn, RequestTimeoutColumn, ActiveColumn, EnableColumn}
 	)
 
 	return configurationTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ID:                IDColumn,
-		APIAccessChangeMe: APIAccessChangeMeColumn,
-		RefreshInterval:   RefreshIntervalColumn,
-		RequestTimeout:    RequestTimeoutColumn,
-		AssetFilter:       AssetFilterColumn,
-		Active:            ActiveColumn,
-		Enable:            EnableColumn,
-		ProjectIds:        ProjectIdsColumn,
-		UserID:            UserIDColumn,
+		ID:              IDColumn,
+		APIKey:          APIKeyColumn,
+		RefreshInterval: RefreshIntervalColumn,
+		RequestTimeout:  RequestTimeoutColumn,
+		Active:          ActiveColumn,
+		Enable:          EnableColumn,
+		ProjectIds:      ProjectIdsColumn,
+		UserID:          UserIDColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

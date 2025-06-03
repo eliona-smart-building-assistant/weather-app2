@@ -31,8 +31,8 @@
 	"icon": null,
 	"name": "weather_app_root",
 	"translation": {
-		"de": "Weather Root",
-		"en": "Wetter App Root"
+		"de": "Wetter App Root",
+		"en": "Weather App Root"
 	},
 	"allowedInactivity": "00:05:00",
 	"urldoc": "https://doc.eliona.io/collection/eliona-english/eliona-apps/apps/weather-app",

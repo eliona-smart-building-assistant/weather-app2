@@ -19,10 +19,9 @@ create schema if not exists weather_app;
 create table if not exists weather_app.configuration
 (
 	id                   bigserial primary key,
-	api_access_change_me text not null,
+	api_key              text not null,
 	refresh_interval     integer not null default 60,
 	request_timeout      integer not null default 120,
-	asset_filter         json not null,
 	active               boolean not null default false,
 	enable               boolean not null default false,
 	project_ids          text[] not null,

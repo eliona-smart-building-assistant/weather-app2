@@ -98,34 +98,19 @@ func (s *ConfigurationAPIService) DeleteConfigurationById(ctx context.Context, c
 
 func toAPIConfig(appConfig appmodel.Configuration) apiserver.Configuration {
 	return apiserver.Configuration{
-		Id:                &appConfig.Id,
-		ApiAccessChangeMe: appConfig.ApiAccessChangeMe,
-		Enable:            &appConfig.Enable,
-		RefreshInterval:   appConfig.RefreshInterval,
-		RequestTimeout:    &appConfig.RequestTimeout,
-		AssetFilter:       toAPIAssetFilter(appConfig.AssetFilter),
-		Active:            &appConfig.Active,
-		ProjectIDs:        &appConfig.ProjectIDs,
-		UserId:            &appConfig.UserId,
+		Id:              &appConfig.Id,
+		ApiKey:          appConfig.ApiKey,
+		Enable:          &appConfig.Enable,
+		RefreshInterval: appConfig.RefreshInterval,
+		RequestTimeout:  &appConfig.RequestTimeout,
+		Active:          &appConfig.Active,
+		ProjectIDs:      &appConfig.ProjectIDs,
+		UserId:          &appConfig.UserId,
 	}
-}
-
-func toAPIAssetFilter(appAF [][]appmodel.FilterRule) (result [][]apiserver.FilterRule) {
-	for _, outer := range appAF {
-		var innerResult []apiserver.FilterRule
-		for _, fr := range outer {
-			innerResult = append(innerResult, apiserver.FilterRule{
-				Parameter: fr.Parameter,
-				Regex:     fr.Regex,
-			})
-		}
-		result = append(result, innerResult)
-	}
-	return result
 }
 
 func toAppConfig(apiConfig apiserver.Configuration) (appConfig appmodel.Configuration) {
-	appConfig.ApiAccessChangeMe = apiConfig.ApiAccessChangeMe
+	appConfig.ApiKey = apiConfig.ApiKey
 
 	if apiConfig.Id != nil {
 		appConfig.Id = *apiConfig.Id
@@ -134,9 +119,7 @@ func toAppConfig(apiConfig apiserver.Configuration) (appConfig appmodel.Configur
 	if apiConfig.RequestTimeout != nil {
 		appConfig.RequestTimeout = *apiConfig.RequestTimeout
 	}
-	if apiConfig.AssetFilter != nil {
-		appConfig.AssetFilter = toAppAssetFilter(apiConfig.AssetFilter)
-	}
+
 	if apiConfig.Active != nil {
 		appConfig.Active = *apiConfig.Active
 	}
@@ -147,18 +130,4 @@ func toAppConfig(apiConfig apiserver.Configuration) (appConfig appmodel.Configur
 		appConfig.ProjectIDs = *apiConfig.ProjectIDs
 	}
 	return appConfig
-}
-
-func toAppAssetFilter(apiAF [][]apiserver.FilterRule) (result [][]appmodel.FilterRule) {
-	for _, outer := range apiAF {
-		var innerResult []appmodel.FilterRule
-		for _, fr := range outer {
-			innerResult = append(innerResult, appmodel.FilterRule{
-				Parameter: fr.Parameter,
-				Regex:     fr.Regex,
-			})
-		}
-		result = append(result, innerResult)
-	}
-	return result
 }

@@ -12,13 +12,12 @@ import (
 )
 
 type Configuration struct {
-	ID                int64 `sql:"primary_key"`
-	APIAccessChangeMe string
-	RefreshInterval   int32
-	RequestTimeout    int32
-	AssetFilter       string
-	Active            bool
-	Enable            bool
-	ProjectIds        pq.StringArray
-	UserID            string
+	ID              int64 `sql:"primary_key"`
+	APIKey          string
+	RefreshInterval int32
+	RequestTimeout  int32
+	Active          bool
+	Enable          bool
+	ProjectIds      pq.StringArray
+	UserID          string
 }
