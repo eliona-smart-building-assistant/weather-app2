@@ -18,7 +18,6 @@ package dbhelper
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	appmodel "weather-app2/app/model"
@@ -31,6 +30,7 @@ import (
 	. "weather-app2/db/generated/postgres/weather_app/table"
 
 	. "github.com/go-jet/jet/v2/postgres"
+	"github.com/go-jet/jet/v2/qrm"
 )
 
 // DBHelper is a singleton struct managing the database connection and queries.
@@ -69,11 +69,6 @@ var ErrBadRequest = errors.New("bad request")
 var ErrNotFound = errors.New("not found")
 
 func UpsertConfig(ctx context.Context, config appmodel.Configuration) (appmodel.Configuration, error) {
-	af, err := json.Marshal(config.AssetFilter)
-	if err != nil {
-		return appmodel.Configuration{}, fmt.Errorf("marshalling asset filter: %w", err)
-	}
-
 	commonColumns := ColumnList{
 		Configuration.APIKey,
 		Configuration.RefreshInterval,
@@ -88,7 +83,6 @@ func UpsertConfig(ctx context.Context, config appmodel.Configuration) (appmodel.
 		config.ApiKey,
 		config.RefreshInterval,
 		config.RequestTimeout,
-		Json(af),
 		config.Active,
 		config.Enable,
 		pq.StringArray(config.ProjectIDs),
@@ -100,7 +94,7 @@ func UpsertConfig(ctx context.Context, config appmodel.Configuration) (appmodel.
 	if config.Id != 0 {
 		// If ID is provided, include it in the INSERT
 		columns := append(commonColumns, Configuration.ID)
-		values := append([]interface{}{config.Id}, commonValues...)
+		values := append(commonValues, config.Id)
 
 		stmt = Configuration.INSERT(columns).VALUES(values[0], values[1:]...).ON_CONFLICT(
 			Configuration.ID,
@@ -122,9 +116,8 @@ func UpsertConfig(ctx context.Context, config appmodel.Configuration) (appmodel.
 	stmt = stmt.RETURNING(Configuration.AllColumns)
 
 	var updatedConfig model.Configuration
-	err = stmt.QueryContext(ctx, GetDB().db, &updatedConfig)
-	if err != nil {
-		return appmodel.Configuration{}, err
+	if err := stmt.QueryContext(ctx, GetDB().db, &updatedConfig); err != nil {
+		return appmodel.Configuration{}, fmt.Errorf("upserting config: %v", err)
 	}
 
 	return toAppConfig(updatedConfig)
@@ -136,7 +129,7 @@ func GetConfig(ctx context.Context, id int64) (appmodel.Configuration, error) {
 		SELECT(Configuration.AllColumns).
 		WHERE(Configuration.ID.EQ(Int(id))).
 		QueryContext(ctx, GetDB().db, &dbConfig)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, qrm.ErrNoRows) {
 		return appmodel.Configuration{}, ErrNotFound
 	} else if err != nil {
 		return appmodel.Configuration{}, err
@@ -236,7 +229,7 @@ func GetAssetId(ctx context.Context, config appmodel.Configuration, projectID, g
 			Asset.GlobalAssetID.EQ(String(gai))),
 	)
 	err := stmt.QueryContext(ctx, GetDB().db, &dest)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, qrm.ErrNoRows) {
 		return nil, ErrNotFound
 	} else if err != nil {
 		return nil, fmt.Errorf("getting asset ID: %v", err)
@@ -259,7 +252,7 @@ func GetAssetById(assetId int32) (appmodel.Asset, error) {
 	).WHERE(
 		Asset.ID.EQ(Int32(assetId)),
 	).Query(GetDB().db, &asset)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, qrm.ErrNoRows) {
 		return appmodel.Asset{}, ErrNotFound
 	} else if err != nil {
 		return appmodel.Asset{}, fmt.Errorf("fetching asset %v: %v", assetId, err)
