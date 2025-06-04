@@ -244,7 +244,15 @@ func ListenForOutputChanges() {
 			asset, err := dbhelper.GetAssetById(output.AssetId)
 			if errors.Is(err, dbhelper.ErrNotFound) {
 				log.Debug("app", "received data update for other apps asset %v: %+v", output.AssetId, output)
-				continue
+				asset, err := eliona.GetAsset(output.AssetId)
+				if err != nil {
+					log.Error("eliona", "getting asset ID %v: %v", output.AssetId, err)
+					continue
+				}
+				if asset.AssetType != "weather_app_weather" {
+					continue
+				}
+				// todo: add to asset table
 			} else if err != nil {
 				log.Error("dbhelper", "getting asset by assetID %v: %v", output.AssetId, err)
 				changeAppStatus(statusError)

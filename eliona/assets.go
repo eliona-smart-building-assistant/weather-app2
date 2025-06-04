@@ -67,3 +67,8 @@ func notifyUser(userId string, projectId string, assetsCreated int) error {
 	}
 	return nil
 }
+
+func GetAsset(assetID int32) (*api.Asset, error) {
+	asset, _, err := client.NewClient().AssetsAPI.GetAssetById(client.AuthenticationContext(), assetID).Execute()
+	return asset, err
+}
