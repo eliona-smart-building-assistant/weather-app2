@@ -211,7 +211,9 @@ func InsertAsset(ctx context.Context, asset appmodel.Asset) error {
 		asset.ProviderID,
 		asset.AssetID,
 		asset.IsRoot,
-	)
+	).ON_CONFLICT(
+		Asset.ProviderID,
+	).DO_NOTHING()
 
 	_, err := stmt.ExecContext(ctx, GetDB().db)
 	return err

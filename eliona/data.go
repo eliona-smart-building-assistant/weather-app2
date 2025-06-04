@@ -18,41 +18,12 @@ package eliona
 import (
 	"fmt"
 	"time"
-	appmodel "weather-app2/app/model"
 
 	api "github.com/eliona-smart-building-assistant/go-eliona-api-client/v2"
 	"github.com/eliona-smart-building-assistant/go-eliona/asset"
-	"github.com/eliona-smart-building-assistant/go-utils/log"
 )
 
 const ClientReference string = "weather-app2"
-
-func UpsertAssetData(config appmodel.Configuration, assets []ExampleDevice) error {
-	for _, projectId := range config.ProjectIDs {
-		for _, a := range assets {
-			log.Debug("Eliona", "upserting data for asset: config %d and asset '%v'", config.Id, a.GetGAI())
-			assetId, err := a.GetAssetID(projectId)
-			if err != nil {
-				return err
-			}
-			if assetId == nil {
-				// This might happen in case of filtered or newly added devices.
-				log.Debug("conf", "unable to find asset ID for %v", a.GetGAI())
-				continue
-			}
-
-			data := asset.Data{
-				AssetId:         *assetId,
-				Data:            a,
-				ClientReference: ClientReference,
-			}
-			if err := asset.UpsertAssetDataIfAssetExists(data); err != nil {
-				return fmt.Errorf("upserting data: %v", err)
-			}
-		}
-	}
-	return nil
-}
 
 func UpsertData(assetID int32, assetData map[string]any, timestamp time.Time, subtype api.DataSubtype) error {
 	cr := ClientReference

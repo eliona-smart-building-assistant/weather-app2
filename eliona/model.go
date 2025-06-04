@@ -20,75 +20,9 @@ import (
 	"fmt"
 	appmodel "weather-app2/app/model"
 	conf "weather-app2/db/helper"
-
-	"github.com/eliona-smart-building-assistant/go-eliona/utils"
-	"github.com/eliona-smart-building-assistant/go-utils/common"
 )
 
-// TODO: define the asset structure here
-
-type ExampleDevice struct {
-	ID   string `eliona:"id" subtype:"info"`
-	Name string `eliona:"name,filterable" subtype:"info"`
-
-	LocationalParentGAI string
-	FunctionalParentGAI string
-
-	Config *appmodel.Configuration
-}
-
-func (d *ExampleDevice) AdheresToFilter(filter [][]appmodel.FilterRule) (bool, error) {
-	f := appFilterToCommonFilter(filter)
-	fp, err := utils.StructToMap(d)
-	if err != nil {
-		return false, fmt.Errorf("converting struct to map: %v", err)
-	}
-	adheres, err := common.Filter(f, fp)
-	if err != nil {
-		return false, err
-	}
-	return adheres, nil
-}
-
-func (d *ExampleDevice) GetName() string {
-	return d.Name
-}
-
-func (d *ExampleDevice) GetDescription() string {
-	return ""
-}
-
-func (d *ExampleDevice) GetAssetType() string {
-	return "weather_app_device"
-}
-
-func (d *ExampleDevice) GetGAI() string {
-	return d.GetAssetType() + "_" + d.ID
-}
-
-func (d *ExampleDevice) GetAssetID(projectID string) (*int32, error) {
-	return conf.GetAssetId(context.Background(), *d.Config, projectID, d.GetGAI())
-}
-
-func (d *ExampleDevice) SetAssetID(assetID int32, projectID string) error {
-	if err := conf.InsertAssetWithDetails(context.Background(), *d.Config, projectID, d.GetGAI(), assetID, d.ID, false); err != nil {
-		return fmt.Errorf("inserting asset to config db: %v", err)
-	}
-	return nil
-}
-
-func (d *ExampleDevice) GetLocationalParentGAI() string {
-	return d.LocationalParentGAI
-}
-
-func (d *ExampleDevice) GetFunctionalParentGAI() string {
-	return d.FunctionalParentGAI
-}
-
 type Root struct {
-	locationsMap map[string]ExampleDevice
-	devicesSlice []ExampleDevice
-
 	LocationalParentGAI string
 	FunctionalParentGAI string
 
@@ -128,20 +62,4 @@ func (r *Root) GetLocationalParentGAI() string {
 
 func (r *Root) GetFunctionalParentGAI() string {
 	return r.FunctionalParentGAI
-}
-
-//
-
-func appFilterToCommonFilter(input [][]appmodel.FilterRule) [][]common.FilterRule {
-	result := make([][]common.FilterRule, len(input))
-	for i := 0; i < len(input); i++ {
-		result[i] = make([]common.FilterRule, len(input[i]))
-		for j := 0; j < len(input[i]); j++ {
-			result[i][j] = common.FilterRule{
-				Parameter: input[i][j].Parameter,
-				Regex:     input[i][j].Regex,
-			}
-		}
-	}
-	return result
 }

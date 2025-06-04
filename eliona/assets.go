@@ -28,7 +28,7 @@ import (
 var devicesCount map[int64]int
 
 func CreateAssets(config appmodel.Configuration, assets []asset.AssetWithParentReferences) error {
-	// TODO: remove this workaround once the assetsCreated is returned correctly againTODO
+	// TODO: remove this workaround once the assetsCreated is returned correctly again
 	if devicesCount == nil {
 		devicesCount = make(map[int64]int)
 	}

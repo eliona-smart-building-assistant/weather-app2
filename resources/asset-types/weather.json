@@ -1,0 +1,37 @@
+{
+	"attributes": [
+		{
+			"name": "temperature",
+			"enable": true,
+			"subtype": "input",
+			"translation": {
+				"de": "Temperatur",
+				"en": "Temperature"
+			},
+			"type": "temperature",
+			"isDigital": false,
+			"unit": "°C"
+		},
+		{
+			"name": "name",
+			"enable": true,
+			"subtype": "property",
+			"translation": {
+				"de": "Location",
+				"en": "Location"
+			},
+			"isDigital": false,
+			"categoryName": "weather-app-location"
+		}
+	],
+	"custom": false,
+	"icon": null,
+	"name": "weather_app_weather",
+	"translation": {
+		"de": "Wetter",
+		"en": "Weather"
+	},
+	"allowedInactivity": "01:30:00",
+	"urldoc": "https://doc.eliona.io/collection/eliona-english/eliona-apps/apps/weather-app",
+	"vendor": "OpenWeatherMap"
+}

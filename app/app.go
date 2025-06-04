@@ -18,6 +18,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
 	"sync"
@@ -31,6 +32,7 @@ import (
 	api "github.com/eliona-smart-building-assistant/go-eliona-api-client/v2"
 	"github.com/eliona-smart-building-assistant/go-eliona/app"
 	"github.com/eliona-smart-building-assistant/go-eliona/asset"
+	"github.com/eliona-smart-building-assistant/go-eliona/client"
 	"github.com/eliona-smart-building-assistant/go-eliona/dashboard"
 	"github.com/eliona-smart-building-assistant/go-eliona/frontend"
 	"github.com/eliona-smart-building-assistant/go-utils/common"
@@ -62,9 +64,50 @@ func Initialize() {
 	// Init the app before the first run.
 	app.Init(conn, app.AppName(),
 		app.ExecSqlFile("db/init.sql"),
+		initAssetCategory(),
 		asset.InitAssetTypeFiles("resources/asset-types/*.json"),
 		dashboard.InitWidgetTypeFiles("resources/widget-types/*.json"),
 	)
+	fmt.Println(initAssetCategory()(conn))
+	fmt.Println(asset.InitAssetTypeFiles("resources/asset-types/*.json")(conn))
+}
+
+func initAssetCategory() func(db.Connection) error {
+	return func(db.Connection) error {
+		_, _, err := client.NewClient().AssetTypesAPI.
+			PutAssetTypeCategory(client.AuthenticationContext()).
+			AssetTypeCategory(api.AssetTypeCategory{
+				Name: "weather-app-location",
+				Translation: *api.NewNullableTranslation(&api.Translation{
+					De: api.PtrString("Wetter-App-Standort"),
+					En: api.PtrString("Weather app location"),
+				}),
+				Properties: []api.AssetTypeCategoryProperty{
+					{
+						Name: *api.PtrString("name"),
+						Translation: *api.NewNullableTranslation(&api.Translation{
+							En: api.PtrString("Name"),
+							De: api.PtrString("Name"),
+						}),
+					},
+					{
+						Name: *api.PtrString("lat"),
+						Translation: *api.NewNullableTranslation(&api.Translation{
+							En: api.PtrString("Latitude"),
+							De: api.PtrString("Breitengrad"),
+						}),
+					},
+					{
+						Name: *api.PtrString("lon"),
+						Translation: *api.NewNullableTranslation(&api.Translation{
+							En: api.PtrString("Longitude"),
+							De: api.PtrString("Längengrad"),
+						}),
+					},
+				},
+			}).Execute()
+		return err
+	}
 }
 
 var (
@@ -112,7 +155,12 @@ func CollectData() {
 
 		// Check for changes in this specific config
 		if isConfigChanged(config) {
-			configChangeChan <- struct{}{}
+			select {
+			case configChangeChan <- struct{}{}: // Non-blocking send
+				log.Debug("app", "Config changed signal sent")
+			default:
+				log.Debug("app", "Config change signal not sent, channel full")
+			}
 		}
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -161,14 +209,28 @@ func isConfigChanged(newConfig appmodel.Configuration) bool {
 }
 
 func collectResources(ctx context.Context, config *appmodel.Configuration) error {
+	if err := createRootAsset(config); err != nil {
+		log.Error("app", "creating root asset for config %v in Eliona: %v", config.Id, err)
+		return err
+	}
 	// Do the magic here
+	return nil
+}
+
+func createRootAsset(config *appmodel.Configuration) error {
+	var assets []asset.AssetWithParentReferences
+	root := eliona.Root{Config: config}
+	assets = append(assets, &root)
+	if err := eliona.CreateAssets(*config, assets); err != nil {
+		return fmt.Errorf("creating assets: %v", err)
+	}
 	return nil
 }
 
 // ListenForOutputChanges listens to output attribute changes from Eliona. Delete if not needed.
 func ListenForOutputChanges() {
 	for { // We want to restart listening in case something breaks.
-		outputs, err := eliona.ListenForOutputChanges()
+		outputs, err := eliona.ListenForPropertyChanges()
 		if err != nil {
 			log.Error("eliona", "listening for output changes: %v", err)
 			changeAppStatus(statusError)
@@ -181,7 +243,7 @@ func ListenForOutputChanges() {
 			}
 			asset, err := dbhelper.GetAssetById(output.AssetId)
 			if errors.Is(err, dbhelper.ErrNotFound) {
-				log.Debug("app", "received data update for other apps asset %v", output.AssetId)
+				log.Debug("app", "received data update for other apps asset %v: %+v", output.AssetId, output)
 				continue
 			} else if err != nil {
 				log.Error("dbhelper", "getting asset by assetID %v: %v", output.AssetId, err)
