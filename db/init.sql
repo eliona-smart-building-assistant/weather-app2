@@ -31,12 +31,20 @@ create table if not exists weather_app.configuration
 create table if not exists weather_app.asset
 (
 	id               bigserial primary key,
+	project_id       text      not null,
+	location_name    text      not null,
+	lat              text      not null,
+	lon              text      not null,
+	asset_id         integer   not null unique
+);
+
+create table if not exists weather_app.root_asset
+(
+	id               bigserial primary key,
 	configuration_id bigserial not null references weather_app.configuration(id) ON DELETE CASCADE,
 	project_id       text      not null,
-	global_asset_id  text      not null,
-	provider_id      text      not null unique,
-	is_root          boolean   not null default false,
-	asset_id         integer
+	gai              text      not null,
+	asset_id         integer   not null unique
 );
 
 -- There is a transaction started in app.Init(). We need to commit to make the

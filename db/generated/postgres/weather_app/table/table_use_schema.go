@@ -12,4 +12,5 @@ package table
 func UseSchema(schema string) {
 	Asset = Asset.FromSchema(schema)
 	Configuration = Configuration.FromSchema(schema)
+	RootAsset = RootAsset.FromSchema(schema)
 }

@@ -183,52 +183,51 @@ func SetConfigActiveState(ctx context.Context, id int64, state bool) error {
 	return err
 }
 
-func InsertAssetWithDetails(ctx context.Context, config appmodel.Configuration, projectID string, globalAssetID string, assetID int32, providerID string, isRoot bool) error {
-	asset := appmodel.Asset{
-		Config:        config,
-		ProjectID:     projectID,
-		GlobalAssetID: globalAssetID,
-		ProviderID:    providerID,
-		IsRoot:        isRoot,
-		AssetID:       assetID,
-	}
-
-	return InsertAsset(ctx, asset)
-}
-
 func InsertAsset(ctx context.Context, asset appmodel.Asset) error {
 	stmt := Asset.INSERT(
-		Asset.ConfigurationID,
 		Asset.ProjectID,
-		Asset.GlobalAssetID,
-		Asset.ProviderID,
 		Asset.AssetID,
-		Asset.IsRoot,
+		Asset.LocationName,
+		Asset.Lat,
+		Asset.Lon,
 	).VALUES(
-		asset.Config.Id,
 		asset.ProjectID,
-		asset.GlobalAssetID,
-		asset.ProviderID,
 		asset.AssetID,
-		asset.IsRoot,
+		asset.LocationName,
+		asset.Lat,
+		asset.Lon,
 	).ON_CONFLICT(
-		Asset.ProviderID,
+		Asset.AssetID,
 	).DO_NOTHING()
 
 	_, err := stmt.ExecContext(ctx, GetDB().db)
 	return err
 }
 
-func GetAssetId(ctx context.Context, config appmodel.Configuration, projectID, gai string) (*int32, error) {
+func UpdateAssetLocation(ctx context.Context, asset appmodel.Asset) error {
+	stmt := Asset.UPDATE(
+		Asset.LocationName,
+		Asset.Lat,
+		Asset.Lon,
+	).SET(
+		asset.LocationName,
+		asset.Lat,
+		asset.Lon,
+	).WHERE(
+		Asset.ID.EQ(Int(asset.ID)),
+	)
+	_, err := stmt.ExecContext(ctx, GetDB().db)
+	return err
+}
+
+func GetAssetId(ctx context.Context, config appmodel.Configuration, projectID, assetID int32) (*int32, error) {
 	var dest struct {
 		ID int32
 	}
 	stmt := Asset.SELECT(
 		Asset.ID,
 	).WHERE(
-		Asset.ConfigurationID.EQ(Int(config.Id)).AND(
-			Asset.ProjectID.EQ(String(projectID))).AND(
-			Asset.GlobalAssetID.EQ(String(gai))),
+		Asset.AssetID.EQ(Int(int64(assetID))),
 	)
 	err := stmt.QueryContext(ctx, GetDB().db, &dest)
 	if errors.Is(err, qrm.ErrNoRows) {
@@ -248,11 +247,11 @@ type assetWithConfig struct {
 func GetAssetById(assetId int32) (appmodel.Asset, error) {
 	var asset assetWithConfig
 	err := SELECT(
-		Asset.AllColumns, Configuration.AllColumns,
+		Asset.AllColumns,
 	).FROM(
-		Asset.INNER_JOIN(Configuration, Configuration.ID.EQ(Asset.ConfigurationID)),
+		Asset,
 	).WHERE(
-		Asset.ID.EQ(Int32(assetId)),
+		Asset.AssetID.EQ(Int32(assetId)),
 	).Query(GetDB().db, &asset)
 	if errors.Is(err, qrm.ErrNoRows) {
 		return appmodel.Asset{}, ErrNotFound
@@ -260,12 +259,7 @@ func GetAssetById(assetId int32) (appmodel.Asset, error) {
 		return appmodel.Asset{}, fmt.Errorf("fetching asset %v: %v", assetId, err)
 	}
 
-	config, err := toAppConfig(asset.Configuration)
-	if err != nil {
-		return appmodel.Asset{}, fmt.Errorf("translating configuration: %v", err)
-	}
-
-	return toAppAsset(asset.Asset, config), nil
+	return toAppAsset(asset.Asset), nil
 }
 
 func toAppConfig(dbCfg model.Configuration) (appmodel.Configuration, error) {
@@ -281,41 +275,93 @@ func toAppConfig(dbCfg model.Configuration) (appmodel.Configuration, error) {
 	}, nil
 }
 
-func toAppAsset(dbAsset model.Asset, config appmodel.Configuration) appmodel.Asset {
-	a := appmodel.Asset{
-		ID:            dbAsset.ID,
-		Config:        config,
-		ProjectID:     dbAsset.ProjectID,
-		GlobalAssetID: dbAsset.GlobalAssetID,
-		ProviderID:    dbAsset.ProviderID,
-		IsRoot:        dbAsset.IsRoot,
+func toAppAsset(dbAsset model.Asset) appmodel.Asset {
+	return appmodel.Asset{
+		ID:           dbAsset.ID,
+		ProjectID:    dbAsset.ProjectID,
+		LocationName: dbAsset.LocationName,
+		Lat:          dbAsset.Lat,
+		Lon:          dbAsset.Lon,
+		AssetID:      dbAsset.AssetID,
 	}
-	if dbAsset.AssetID != nil {
-		a.AssetID = *dbAsset.AssetID
-	}
-	return a
 }
 
-func GetRootAssets() ([]appmodel.Asset, error) {
-	var assets []assetWithConfig
+func UpsertRootAsset(configID int64, assetID int32, projectID, gai string) error {
+	stmt := RootAsset.INSERT(
+		RootAsset.ConfigurationID,
+		RootAsset.Gai,
+		RootAsset.ProjectID,
+		RootAsset.AssetID,
+	).VALUES(
+		configID,
+		gai,
+		projectID,
+		assetID,
+	).ON_CONFLICT(
+		RootAsset.AssetID,
+	).DO_NOTHING()
+
+	_, err := stmt.ExecContext(context.Background(), GetDB().db)
+	return err
+}
+
+func GetRootAssets() ([]appmodel.RootAsset, error) {
+	var assets []model.Asset
 	err := SELECT(
-		Asset.AllColumns, Configuration.AllColumns,
+		RootAsset.AllColumns,
 	).FROM(
-		Asset.INNER_JOIN(Configuration, Configuration.ID.EQ(Asset.ConfigurationID)),
-	).WHERE(
-		Asset.IsRoot.EQ(Bool(true)),
+		RootAsset,
 	).Query(GetDB().db, &assets)
 	if err != nil {
 		return nil, fmt.Errorf("fetching root assets: %v", err)
 	}
 
-	appAssets := make([]appmodel.Asset, 0, len(assets))
+	appAssets := make([]appmodel.RootAsset, 0, len(assets))
 	for _, asset := range assets {
-		config, err := toAppConfig(asset.Configuration)
-		if err != nil {
-			return nil, fmt.Errorf("translating configuration: %v", err)
-		}
-		appAssets = append(appAssets, toAppAsset(asset.Asset, config))
+		appAssets = append(appAssets, appmodel.RootAsset{
+			ID:      asset.ID,
+			AssetID: asset.AssetID,
+		})
 	}
 	return appAssets, nil
+}
+
+func GetRootAssetId(ctx context.Context, projectID, gai string) (*int32, error) {
+	var dest struct {
+		ID int32
+	}
+	stmt := RootAsset.SELECT(
+		RootAsset.ID,
+	).WHERE(
+		RootAsset.Gai.EQ(String(gai)).AND(
+			RootAsset.ProjectID.EQ(String(projectID)),
+		),
+	)
+	err := stmt.QueryContext(ctx, GetDB().db, &dest)
+	if errors.Is(err, qrm.ErrNoRows) {
+		return nil, ErrNotFound
+	} else if err != nil {
+		return nil, fmt.Errorf("getting root asset ID: %v", err)
+	}
+
+	return &dest.ID, nil
+}
+
+func ConfigHasRootAsset(configID int64) (bool, error) {
+	var dest struct {
+		ID int32
+	}
+	stmt := RootAsset.SELECT(
+		RootAsset.ID,
+	).WHERE(
+		RootAsset.ConfigurationID.EQ(Int(configID)),
+	)
+	err := stmt.QueryContext(context.Background(), GetDB().db, &dest)
+	if errors.Is(err, qrm.ErrNoRows) {
+		return false, nil
+	} else if err != nil {
+		return false, fmt.Errorf("getting root asset: %v", err)
+	}
+
+	return true, nil
 }

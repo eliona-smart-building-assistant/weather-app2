@@ -218,6 +218,11 @@ func collectResources(ctx context.Context, config *appmodel.Configuration) error
 }
 
 func createRootAsset(config *appmodel.Configuration) error {
+	if hasRoot, err := dbhelper.ConfigHasRootAsset(config.Id); err != nil {
+		return fmt.Errorf("finding whether config already has root asset: %v", err)
+	} else if hasRoot {
+		return nil
+	}
 	var assets []asset.AssetWithParentReferences
 	root := eliona.Root{Config: config}
 	assets = append(assets, &root)
@@ -243,35 +248,73 @@ func ListenForOutputChanges() {
 			}
 			asset, err := dbhelper.GetAssetById(output.AssetId)
 			if errors.Is(err, dbhelper.ErrNotFound) {
-				log.Debug("app", "received data update for other apps asset %v: %+v", output.AssetId, output)
+				log.Debug("app", "received data update for asset %v: %+v", output.AssetId, output)
 				asset, err := eliona.GetAsset(output.AssetId)
 				if err != nil {
 					log.Error("eliona", "getting asset ID %v: %v", output.AssetId, err)
 					continue
 				}
+
 				if asset.AssetType != "weather_app_weather" {
+					log.Debug("eliona", "this asset is not ours")
 					continue
 				}
-				// todo: add to asset table
+
+				locationName, ok := getLocationName(output.Data)
+				if !ok {
+					continue
+				}
+
+				if err := dbhelper.InsertAsset(client.AuthenticationContext(), appmodel.Asset{
+					ProjectID:    asset.ProjectId,
+					AssetID:      asset.GetId(),
+					LocationName: locationName,
+					Lat:          "",
+					Lon:          "",
+				}); err != nil {
+					log.Error("dbhelper", "inserting asset: %v", err)
+					continue
+				}
+				continue
 			} else if err != nil {
 				log.Error("dbhelper", "getting asset by assetID %v: %v", output.AssetId, err)
 				changeAppStatus(statusError)
 				return
 			}
-			if err := outputData(asset, output.Data); err != nil {
-				log.Error("dbhelper", "outputting data (%v) for config %v and assetId %v: %v", output.Data, asset.Config.Id, asset.AssetID, err)
-				changeAppStatus(statusError)
-				return
+
+			locationName, ok := getLocationName(output.Data)
+			if !ok {
+				continue
+			}
+
+			if err := dbhelper.UpdateAssetLocation(client.AuthenticationContext(), appmodel.Asset{
+				ID:           asset.ID,
+				LocationName: locationName,
+				Lat:          "",
+				Lon:          "",
+			}); err != nil {
+				log.Error("dbhelper", "updating asset: %v", err)
+				continue
 			}
 		}
 		time.Sleep(time.Second * 5) // Give the server a little break.
 	}
 }
 
-// outputData implements passing output data to broker. Remove if not needed.
-func outputData(asset appmodel.Asset, data map[string]interface{}) error {
-	// Do the output magic here.
-	return nil
+func getLocationName(data map[string]interface{}) (string, bool) {
+	outputLocationName, ok := data["name"]
+	if !ok {
+		log.Warn("eliona", "received known asset type, but don't understand data: %+v", data)
+		return "", false
+	}
+
+	locationName, ok := outputLocationName.(string)
+	if !ok {
+		log.Warn("eliona", "received known asset type, but cannot convert location name to string: %+v", data)
+		return "", false
+	}
+
+	return locationName, true
 }
 
 func Heartbeat() {

@@ -20,7 +20,6 @@ type Configuration struct {
 	ApiKey          string
 	RefreshInterval int32
 	RequestTimeout  int32
-	AssetFilter     [][]FilterRule
 	Enable          bool
 	Active          bool
 	ProjectIDs      []string
@@ -33,11 +32,15 @@ type FilterRule struct {
 }
 
 type Asset struct {
-	ID            int64
-	Config        Configuration
-	ProjectID     string
-	GlobalAssetID string
-	ProviderID    string
-	AssetID       int32
-	IsRoot        bool
+	ID           int64
+	ProjectID    string
+	LocationName string
+	Lat          string
+	Lon          string
+	AssetID      int32
+}
+
+type RootAsset struct {
+	ID      int64
+	AssetID int32
 }

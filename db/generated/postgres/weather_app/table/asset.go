@@ -17,13 +17,12 @@ type assetTable struct {
 	postgres.Table
 
 	// Columns
-	ID              postgres.ColumnInteger
-	ConfigurationID postgres.ColumnInteger
-	ProjectID       postgres.ColumnString
-	GlobalAssetID   postgres.ColumnString
-	ProviderID      postgres.ColumnString
-	IsRoot          postgres.ColumnBool
-	AssetID         postgres.ColumnInteger
+	ID           postgres.ColumnInteger
+	ProjectID    postgres.ColumnString
+	LocationName postgres.ColumnString
+	Lat          postgres.ColumnString
+	Lon          postgres.ColumnString
+	AssetID      postgres.ColumnInteger
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -65,29 +64,27 @@ func newAssetTable(schemaName, tableName, alias string) *AssetTable {
 
 func newAssetTableImpl(schemaName, tableName, alias string) assetTable {
 	var (
-		IDColumn              = postgres.IntegerColumn("id")
-		ConfigurationIDColumn = postgres.IntegerColumn("configuration_id")
-		ProjectIDColumn       = postgres.StringColumn("project_id")
-		GlobalAssetIDColumn   = postgres.StringColumn("global_asset_id")
-		ProviderIDColumn      = postgres.StringColumn("provider_id")
-		IsRootColumn          = postgres.BoolColumn("is_root")
-		AssetIDColumn         = postgres.IntegerColumn("asset_id")
-		allColumns            = postgres.ColumnList{IDColumn, ConfigurationIDColumn, ProjectIDColumn, GlobalAssetIDColumn, ProviderIDColumn, IsRootColumn, AssetIDColumn}
-		mutableColumns        = postgres.ColumnList{ConfigurationIDColumn, ProjectIDColumn, GlobalAssetIDColumn, ProviderIDColumn, IsRootColumn, AssetIDColumn}
-		defaultColumns        = postgres.ColumnList{IDColumn, ConfigurationIDColumn, IsRootColumn}
+		IDColumn           = postgres.IntegerColumn("id")
+		ProjectIDColumn    = postgres.StringColumn("project_id")
+		LocationNameColumn = postgres.StringColumn("location_name")
+		LatColumn          = postgres.StringColumn("lat")
+		LonColumn          = postgres.StringColumn("lon")
+		AssetIDColumn      = postgres.IntegerColumn("asset_id")
+		allColumns         = postgres.ColumnList{IDColumn, ProjectIDColumn, LocationNameColumn, LatColumn, LonColumn, AssetIDColumn}
+		mutableColumns     = postgres.ColumnList{ProjectIDColumn, LocationNameColumn, LatColumn, LonColumn, AssetIDColumn}
+		defaultColumns     = postgres.ColumnList{IDColumn}
 	)
 
 	return assetTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		ID:              IDColumn,
-		ConfigurationID: ConfigurationIDColumn,
-		ProjectID:       ProjectIDColumn,
-		GlobalAssetID:   GlobalAssetIDColumn,
-		ProviderID:      ProviderIDColumn,
-		IsRoot:          IsRootColumn,
-		AssetID:         AssetIDColumn,
+		ID:           IDColumn,
+		ProjectID:    ProjectIDColumn,
+		LocationName: LocationNameColumn,
+		Lat:          LatColumn,
+		Lon:          LonColumn,
+		AssetID:      AssetIDColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
