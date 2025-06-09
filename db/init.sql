@@ -30,12 +30,12 @@ create table if not exists weather_app.configuration
 
 create table if not exists weather_app.asset
 (
-	id               bigserial primary key,
-	project_id       text      not null,
-	location_name    text      not null,
-	lat              text      not null,
-	lon              text      not null,
-	asset_id         integer   not null unique
+	id               bigserial        primary key,
+	project_id       text             not null,
+	location_name    text             not null,
+	lat              double precision not null,
+	lon              double precision not null,
+	asset_id         integer          not null unique
 );
 
 create table if not exists weather_app.root_asset

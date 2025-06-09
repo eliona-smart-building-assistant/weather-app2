@@ -35,8 +35,8 @@ type Asset struct {
 	ID           int64
 	ProjectID    string
 	LocationName string
-	Lat          string
-	Lon          string
+	Lat          float64
+	Lon          float64
 	AssetID      int32
 }
 

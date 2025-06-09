@@ -26,6 +26,7 @@ import (
 	apiserver "weather-app2/api/generated"
 	apiservices "weather-app2/api/services"
 	appmodel "weather-app2/app/model"
+	"weather-app2/broker"
 	dbhelper "weather-app2/db/helper"
 	"weather-app2/eliona"
 
@@ -263,12 +264,31 @@ func ListenForOutputChanges() {
 					continue
 				}
 
+				config, err := dbhelper.GetConfig(context.Background())
+				if err != nil {
+					log.Error("dbhelper", "getting config: %v", err)
+					changeAppStatus(statusError)
+					return
+				}
+				location, err := broker.Locate(config, locationName)
+				if err != nil {
+					log.Warn("app", "trying to locate %s: %v", locationName, err)
+					continue
+				}
+
+				locationNameFormatted := fmt.Sprintf("%s, %s, %s", location.Name, location.State, location.Country)
+
+				if err := eliona.UpsertData(asset.GetId(), map[string]any{"name": locationNameFormatted}, time.Now(), api.SUBTYPE_PROPERTY); err != nil {
+					log.Error("eliona", "updating asset %v location name: %v", asset.GetId(), err)
+					continue
+				}
+
 				if err := dbhelper.InsertAsset(client.AuthenticationContext(), appmodel.Asset{
 					ProjectID:    asset.ProjectId,
 					AssetID:      asset.GetId(),
-					LocationName: locationName,
-					Lat:          "",
-					Lon:          "",
+					LocationName: locationNameFormatted,
+					Lat:          location.Lat,
+					Lon:          location.Lon,
 				}); err != nil {
 					log.Error("dbhelper", "inserting asset: %v", err)
 					continue
@@ -285,11 +305,30 @@ func ListenForOutputChanges() {
 				continue
 			}
 
+			config, err := dbhelper.GetConfig(context.Background())
+			if err != nil {
+				log.Error("dbhelper", "getting config: %v", err)
+				changeAppStatus(statusError)
+				return
+			}
+			location, err := broker.Locate(config, locationName)
+			if err != nil {
+				log.Warn("app", "trying to locate %s: %v", locationName, err)
+				continue
+			}
+
+			locationNameFormatted := fmt.Sprintf("%s, %s, %s", location.Name, location.State, location.Country)
+
+			if err := eliona.UpsertData(asset.AssetID, map[string]any{"name": locationNameFormatted}, time.Now(), api.SUBTYPE_PROPERTY); err != nil {
+				log.Error("eliona", "updating asset %v location name: %v", asset.AssetID, err)
+				continue
+			}
+
 			if err := dbhelper.UpdateAssetLocation(client.AuthenticationContext(), appmodel.Asset{
 				ID:           asset.ID,
-				LocationName: locationName,
-				Lat:          "",
-				Lon:          "",
+				LocationName: locationNameFormatted,
+				Lat:          location.Lat,
+				Lon:          location.Lon,
 			}); err != nil {
 				log.Error("dbhelper", "updating asset: %v", err)
 				continue
