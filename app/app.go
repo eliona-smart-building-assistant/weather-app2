@@ -233,66 +233,22 @@ func createRootAsset(config *appmodel.Configuration) error {
 
 // ListenForOutputChanges listens to output attribute changes from Eliona. Delete if not needed.
 func ListenForOutputChanges() {
-	for { // We want to restart listening in case something breaks.
+	for {
 		outputs, err := eliona.ListenForPropertyChanges()
 		if err != nil {
 			log.Error("eliona", "listening for output changes: %v", err)
 			changeAppStatus(statusError)
 			return
 		}
+
 		for output := range outputs {
 			if cr := output.ClientReference.Get(); cr != nil && *cr == eliona.ClientReference {
-				// Just an echoed value this app sent.
 				continue
 			}
+
 			asset, err := dbhelper.GetAssetById(output.AssetId)
 			if errors.Is(err, dbhelper.ErrNotFound) {
-				log.Debug("app", "received data update for asset %v: %+v", output.AssetId, output)
-				asset, err := eliona.GetAsset(output.AssetId)
-				if err != nil {
-					log.Error("eliona", "getting asset ID %v: %v", output.AssetId, err)
-					continue
-				}
-
-				if asset.AssetType != "weather_app_weather" {
-					log.Debug("eliona", "this asset is not ours")
-					continue
-				}
-
-				locationName, ok := getLocationName(output.Data)
-				if !ok {
-					continue
-				}
-
-				config, err := dbhelper.GetConfig(context.Background())
-				if err != nil {
-					log.Error("dbhelper", "getting config: %v", err)
-					changeAppStatus(statusError)
-					return
-				}
-				location, err := broker.Locate(config, locationName)
-				if err != nil {
-					log.Warn("app", "trying to locate %s: %v", locationName, err)
-					continue
-				}
-
-				locationNameFormatted := fmt.Sprintf("%s, %s, %s", location.Name, location.State, location.Country)
-
-				if err := eliona.UpsertData(asset.GetId(), map[string]any{"name": locationNameFormatted}, time.Now(), api.SUBTYPE_PROPERTY); err != nil {
-					log.Error("eliona", "updating asset %v location name: %v", asset.GetId(), err)
-					continue
-				}
-
-				if err := dbhelper.InsertAsset(client.AuthenticationContext(), appmodel.Asset{
-					ProjectID:    asset.ProjectId,
-					AssetID:      asset.GetId(),
-					LocationName: locationNameFormatted,
-					Lat:          location.Lat,
-					Lon:          location.Lon,
-				}); err != nil {
-					log.Error("dbhelper", "inserting asset: %v", err)
-					continue
-				}
+				handleNewAsset(output)
 				continue
 			} else if err != nil {
 				log.Error("dbhelper", "getting asset by assetID %v: %v", output.AssetId, err)
@@ -300,41 +256,98 @@ func ListenForOutputChanges() {
 				return
 			}
 
-			locationName, ok := getLocationName(output.Data)
-			if !ok {
-				continue
-			}
-
-			config, err := dbhelper.GetConfig(context.Background())
-			if err != nil {
-				log.Error("dbhelper", "getting config: %v", err)
-				changeAppStatus(statusError)
-				return
-			}
-			location, err := broker.Locate(config, locationName)
-			if err != nil {
-				log.Warn("app", "trying to locate %s: %v", locationName, err)
-				continue
-			}
-
-			locationNameFormatted := fmt.Sprintf("%s, %s, %s", location.Name, location.State, location.Country)
-
-			if err := eliona.UpsertData(asset.AssetID, map[string]any{"name": locationNameFormatted}, time.Now(), api.SUBTYPE_PROPERTY); err != nil {
-				log.Error("eliona", "updating asset %v location name: %v", asset.AssetID, err)
-				continue
-			}
-
-			if err := dbhelper.UpdateAssetLocation(client.AuthenticationContext(), appmodel.Asset{
-				ID:           asset.ID,
-				LocationName: locationNameFormatted,
-				Lat:          location.Lat,
-				Lon:          location.Lon,
-			}); err != nil {
-				log.Error("dbhelper", "updating asset: %v", err)
-				continue
-			}
+			handleExistingAsset(output, asset)
 		}
-		time.Sleep(time.Second * 5) // Give the server a little break.
+
+		time.Sleep(time.Second * 5)
+	}
+}
+
+func handleNewAsset(output api.Data) {
+	log.Debug("app", "received data update for new asset %v: %+v", output.AssetId, output)
+
+	elionaAsset, err := eliona.GetAsset(output.AssetId)
+	if err != nil {
+		log.Error("eliona", "getting asset ID %v: %v", output.AssetId, err)
+		return
+	}
+
+	if elionaAsset.AssetType != "weather_app_weather" {
+		log.Debug("eliona", "this asset is not ours")
+		return
+	}
+
+	locationName, ok := getLocationName(output.Data)
+	if !ok {
+		return
+	}
+
+	config, err := dbhelper.GetConfig(context.Background())
+	if err != nil {
+		log.Error("dbhelper", "getting config: %v", err)
+		changeAppStatus(statusError)
+		return
+	}
+
+	location, err := broker.Locate(config, locationName)
+	if err != nil {
+		log.Warn("app", "trying to locate %s: %v", locationName, err)
+		return
+	}
+
+	locationNameFormatted := formatLocationName(location)
+
+	if err := eliona.UpsertData(elionaAsset.GetId(), map[string]any{"name": locationNameFormatted}, time.Now(), api.SUBTYPE_PROPERTY); err != nil {
+		log.Error("eliona", "updating asset %v location name: %v", elionaAsset.GetId(), err)
+		return
+	}
+
+	if err := dbhelper.InsertAsset(client.AuthenticationContext(), appmodel.Asset{
+		ProjectID:    elionaAsset.ProjectId,
+		AssetID:      elionaAsset.GetId(),
+		LocationName: locationNameFormatted,
+		Lat:          location.Lat,
+		Lon:          location.Lon,
+	}); err != nil {
+		log.Error("dbhelper", "inserting asset: %v", err)
+	}
+}
+
+func handleExistingAsset(output api.Data, asset appmodel.Asset) {
+	log.Debug("app", "received data update for known asset %v: %+v", output.AssetId, output)
+
+	locationName, ok := getLocationName(output.Data)
+	if !ok {
+		return
+	}
+
+	config, err := dbhelper.GetConfig(context.Background())
+	if err != nil {
+		log.Error("dbhelper", "getting config: %v", err)
+		changeAppStatus(statusError)
+		return
+	}
+
+	location, err := broker.Locate(config, locationName)
+	if err != nil {
+		log.Warn("app", "trying to locate %s: %v", locationName, err)
+		return
+	}
+
+	locationNameFormatted := formatLocationName(location)
+
+	if err := eliona.UpsertData(asset.AssetID, map[string]any{"name": locationNameFormatted}, time.Now(), api.SUBTYPE_PROPERTY); err != nil {
+		log.Error("eliona", "updating asset %v location name: %v", asset.AssetID, err)
+		return
+	}
+
+	if err := dbhelper.UpdateAssetLocation(client.AuthenticationContext(), appmodel.Asset{
+		ID:           asset.ID,
+		LocationName: locationNameFormatted,
+		Lat:          location.Lat,
+		Lon:          location.Lon,
+	}); err != nil {
+		log.Error("dbhelper", "updating asset: %v", err)
 	}
 }
 
@@ -352,6 +365,10 @@ func getLocationName(data map[string]interface{}) (string, bool) {
 	}
 
 	return locationName, true
+}
+
+func formatLocationName(location broker.Geolocation) string {
+	return fmt.Sprintf("%s, %s, %s", location.Name, location.State, location.Country)
 }
 
 func Heartbeat() {
