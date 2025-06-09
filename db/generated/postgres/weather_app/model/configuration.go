@@ -12,7 +12,7 @@ import (
 )
 
 type Configuration struct {
-	ID              int64 `sql:"primary_key"`
+	ID              int32 `sql:"primary_key"`
 	APIKey          string
 	RefreshInterval int32
 	RequestTimeout  int32

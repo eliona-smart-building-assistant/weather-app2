@@ -118,74 +118,72 @@ var (
 )
 
 func CollectData() {
-	configs, err := dbhelper.GetConfigs(context.Background())
-	if err != nil {
-		log.Fatal("dbhelper", "Couldn't read configs from DB: %v", err)
-		changeAppStatus(statusFatal)
-		return
-	}
-	if len(configs) == 0 {
+	config, err := dbhelper.GetConfig(context.Background())
+	if errors.Is(err, dbhelper.ErrNotFound) {
 		once.Do(func() {
 			log.Info("dbhelper", "No configs in DB. Please configure the app in Eliona.")
 		})
 		return
 	}
-
-	for _, config := range configs {
-		if !config.Enable {
-			if config.Active {
-				dbhelper.SetConfigActiveState(context.Background(), config.Id, false)
-			}
-			continue
-		}
-
-		if !config.Active {
-			dbhelper.SetConfigActiveState(context.Background(), config.Id, true)
-			log.Info("dbhelper", "Collecting initialized with Configuration %d:\n"+
-				"Enable: %t\n"+
-				"Refresh Interval: %d\n"+
-				"Request Timeout: %d\n"+
-				"Project IDs: %v\n",
-				config.Id,
-				config.Enable,
-				config.RefreshInterval,
-				config.RequestTimeout,
-				config.ProjectIDs)
-		}
-
-		// Check for changes in this specific config
-		if isConfigChanged(config) {
-			select {
-			case configChangeChan <- struct{}{}: // Non-blocking send
-				log.Debug("app", "Config changed signal sent")
-			default:
-				log.Debug("app", "Config change signal not sent, channel full")
-			}
-		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		common.RunOnceWithParam(func(config appmodel.Configuration) {
-			log.Info("main", "Collecting %d started.", config.Id)
-			if err := collectResources(ctx, &config); err != nil {
-				changeAppStatus(statusError)
-				cancel() // Cancel the context to stop the long-running processes
-				return   // Error is handled in the method itself.
-			}
-			log.Info("main", "Collecting %d finished.", config.Id)
-			changeAppStatus(statusOK)
-
-			// Wait for the next interval or a config change
-			select {
-			case <-time.After(time.Second * time.Duration(config.RefreshInterval)):
-				// Continue with the next iteration
-				return
-			case <-configChangeChan:
-				// Config changed, restart the process
-				cancel() // Cancel the context to stop the long-running process
-				return
-			}
-		}, config, config.Id)
+	if err != nil {
+		log.Fatal("dbhelper", "Couldn't read configs from DB: %v", err)
+		changeAppStatus(statusFatal)
+		return
 	}
+
+	if !config.Enable {
+		if config.Active {
+			dbhelper.SetConfigActiveState(context.Background(), false)
+		}
+		return
+	}
+
+	if !config.Active {
+		dbhelper.SetConfigActiveState(context.Background(), true)
+		log.Info("dbhelper", "Collecting initialized with Configuration %d:\n"+
+			"Enable: %t\n"+
+			"Refresh Interval: %d\n"+
+			"Request Timeout: %d\n"+
+			"Project IDs: %v\n",
+			config.Id,
+			config.Enable,
+			config.RefreshInterval,
+			config.RequestTimeout,
+			config.ProjectIDs)
+	}
+
+	// Check for changes in this specific config
+	if isConfigChanged(config) {
+		select {
+		case configChangeChan <- struct{}{}: // Non-blocking send
+			log.Debug("app", "Config changed signal sent")
+		default:
+			log.Debug("app", "Config change signal not sent, channel full")
+		}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	common.RunOnceWithParam(func(config appmodel.Configuration) {
+		log.Info("main", "Collecting %d started.", config.Id)
+		if err := collectResources(ctx, &config); err != nil {
+			changeAppStatus(statusError)
+			cancel() // Cancel the context to stop the long-running processes
+			return   // Error is handled in the method itself.
+		}
+		log.Info("main", "Collecting %d finished.", config.Id)
+		changeAppStatus(statusOK)
+
+		// Wait for the next interval or a config change
+		select {
+		case <-time.After(time.Second * time.Duration(config.RefreshInterval)):
+			// Continue with the next iteration
+			return
+		case <-configChangeChan:
+			// Config changed, restart the process
+			cancel() // Cancel the context to stop the long-running process
+			return
+		}
+	}, config, config.Id)
 }
 
 func isConfigChanged(newConfig appmodel.Configuration) bool {
@@ -218,7 +216,7 @@ func collectResources(ctx context.Context, config *appmodel.Configuration) error
 }
 
 func createRootAsset(config *appmodel.Configuration) error {
-	if hasRoot, err := dbhelper.ConfigHasRootAsset(config.Id); err != nil {
+	if hasRoot, err := dbhelper.RootAssetAlreadyCreated(); err != nil {
 		return fmt.Errorf("finding whether config already has root asset: %v", err)
 	} else if hasRoot {
 		return nil

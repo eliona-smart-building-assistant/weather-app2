@@ -8,8 +8,8 @@
 package model
 
 type RootAsset struct {
-	ID              int64 `sql:"primary_key"`
-	ConfigurationID int64
+	ID              int32 `sql:"primary_key"`
+	ConfigurationID int32
 	ProjectID       string
 	Gai             string
 	AssetID         int32

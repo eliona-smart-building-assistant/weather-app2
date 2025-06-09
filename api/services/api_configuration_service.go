@@ -17,13 +17,14 @@ package apiservices
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	apiserver "weather-app2/api/generated"
 	appmodel "weather-app2/app/model"
 	"weather-app2/broker"
 	dbhelper "weather-app2/db/helper"
+
+	api "github.com/eliona-smart-building-assistant/go-eliona-api-client/v2"
 )
 
 // ConfigurationAPIService is a service that implements the logic for the ConfigurationAPIServicer
@@ -37,43 +38,16 @@ func NewConfigurationAPIService() apiserver.ConfigurationAPIServicer {
 	return &ConfigurationAPIService{}
 }
 
-func (s *ConfigurationAPIService) GetConfigurations(ctx context.Context) (apiserver.ImplResponse, error) {
-	appConfigs, err := dbhelper.GetConfigs(ctx)
+func (s *ConfigurationAPIService) GetConfiguration(ctx context.Context) (apiserver.ImplResponse, error) {
+	appConfig, err := dbhelper.GetConfig(ctx)
 	if err != nil {
 		return apiserver.ImplResponse{Code: http.StatusInternalServerError}, err
 	}
-	var configs []apiserver.Configuration
-	for _, appConfig := range appConfigs {
-		configs = append(configs, toAPIConfig(appConfig))
-	}
-	return apiserver.Response(http.StatusOK, configs), nil
+	return apiserver.Response(http.StatusOK, toAPIConfig(appConfig)), nil
 }
 
-func (s *ConfigurationAPIService) PostConfiguration(ctx context.Context, config apiserver.Configuration) (apiserver.ImplResponse, error) {
-	appConfig := toAppConfig(config)
-	if err := broker.TestAuthentication(appConfig); err != nil {
-		return apiserver.ImplResponse{Code: http.StatusBadRequest}, fmt.Errorf("testing authentication: %v", err)
-	}
-	insertedConfig, err := dbhelper.UpsertConfig(ctx, appConfig)
-	if err != nil {
-		return apiserver.ImplResponse{Code: http.StatusInternalServerError}, err
-	}
-	return apiserver.Response(http.StatusCreated, toAPIConfig(insertedConfig)), nil
-}
-
-func (s *ConfigurationAPIService) GetConfigurationById(ctx context.Context, configId int64) (apiserver.ImplResponse, error) {
-	config, err := dbhelper.GetConfig(ctx, configId)
-	if errors.Is(err, dbhelper.ErrNotFound) {
-		return apiserver.ImplResponse{Code: http.StatusNotFound}, nil
-	}
-	if err != nil {
-		return apiserver.ImplResponse{Code: http.StatusInternalServerError}, err
-	}
-	return apiserver.Response(http.StatusOK, toAPIConfig(config)), nil
-}
-
-func (s *ConfigurationAPIService) PutConfigurationById(ctx context.Context, configId int64, config apiserver.Configuration) (apiserver.ImplResponse, error) {
-	config.Id = &configId
+func (s *ConfigurationAPIService) PutConfiguration(ctx context.Context, config apiserver.Configuration) (apiserver.ImplResponse, error) {
+	config.Id = api.PtrInt64(1)
 	appConfig := toAppConfig(config)
 	if err := broker.TestAuthentication(appConfig); err != nil {
 		return apiserver.ImplResponse{Code: http.StatusBadRequest}, fmt.Errorf("testing authentication: %v", err)
@@ -83,17 +57,6 @@ func (s *ConfigurationAPIService) PutConfigurationById(ctx context.Context, conf
 		return apiserver.ImplResponse{Code: http.StatusInternalServerError}, err
 	}
 	return apiserver.Response(http.StatusCreated, toAPIConfig(upsertedConfig)), nil
-}
-
-func (s *ConfigurationAPIService) DeleteConfigurationById(ctx context.Context, configId int64) (apiserver.ImplResponse, error) {
-	err := dbhelper.DeleteConfig(ctx, configId)
-	if errors.Is(err, dbhelper.ErrNotFound) {
-		return apiserver.ImplResponse{Code: http.StatusNotFound}, nil
-	}
-	if err != nil {
-		return apiserver.ImplResponse{Code: http.StatusInternalServerError}, err
-	}
-	return apiserver.ImplResponse{Code: http.StatusNoContent}, nil
 }
 
 func toAPIConfig(appConfig appmodel.Configuration) apiserver.Configuration {

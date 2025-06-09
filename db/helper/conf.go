@@ -123,11 +123,10 @@ func UpsertConfig(ctx context.Context, config appmodel.Configuration) (appmodel.
 	return toAppConfig(updatedConfig)
 }
 
-func GetConfig(ctx context.Context, id int64) (appmodel.Configuration, error) {
+func GetConfig(ctx context.Context) (appmodel.Configuration, error) {
 	var dbConfig model.Configuration
 	err := Configuration.
 		SELECT(Configuration.AllColumns).
-		WHERE(Configuration.ID.EQ(Int(id))).
 		QueryContext(ctx, GetDB().db, &dbConfig)
 	if errors.Is(err, qrm.ErrNoRows) {
 		return appmodel.Configuration{}, ErrNotFound
@@ -138,47 +137,9 @@ func GetConfig(ctx context.Context, id int64) (appmodel.Configuration, error) {
 	return toAppConfig(dbConfig)
 }
 
-func DeleteConfig(ctx context.Context, id int64) error {
-	stmt := Configuration.DELETE().
-		WHERE(Configuration.ID.EQ(Int(id)))
-	r, err := stmt.ExecContext(ctx, GetDB().db)
-	if err != nil {
-		return err
-	}
-	rows, _ := r.RowsAffected()
-	if rows == 0 {
-		return ErrNotFound
-	}
-	if rows > 1 {
-		return fmt.Errorf("unexpected deletion: deleted %d rows", rows)
-	}
-	return nil
-}
-
-func GetConfigs(ctx context.Context) ([]appmodel.Configuration, error) {
-	var dbConfigs []model.Configuration
-	stmt := Configuration.SELECT(Configuration.AllColumns)
-
-	err := stmt.QueryContext(ctx, GetDB().db, &dbConfigs)
-	if err != nil {
-		return nil, err
-	}
-
-	configs := make([]appmodel.Configuration, len(dbConfigs))
-	for i, dbCfg := range dbConfigs {
-		configs[i], err = toAppConfig(dbCfg)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return configs, nil
-}
-
-func SetConfigActiveState(ctx context.Context, id int64, state bool) error {
+func SetConfigActiveState(ctx context.Context, state bool) error {
 	stmt := Configuration.UPDATE(Configuration.Active).
-		SET(state).
-		WHERE(Configuration.ID.EQ(Int(id)))
-
+		SET(state)
 	_, err := stmt.ExecContext(ctx, GetDB().db)
 	return err
 }
@@ -264,7 +225,7 @@ func GetAssetById(assetId int32) (appmodel.Asset, error) {
 
 func toAppConfig(dbCfg model.Configuration) (appmodel.Configuration, error) {
 	return appmodel.Configuration{
-		Id:              dbCfg.ID,
+		Id:              1,
 		ApiKey:          dbCfg.APIKey,
 		RefreshInterval: dbCfg.RefreshInterval,
 		RequestTimeout:  dbCfg.RequestTimeout,
@@ -286,14 +247,14 @@ func toAppAsset(dbAsset model.Asset) appmodel.Asset {
 	}
 }
 
-func UpsertRootAsset(configID int64, assetID int32, projectID, gai string) error {
+func UpsertRootAsset(assetID int32, projectID, gai string) error {
 	stmt := RootAsset.INSERT(
 		RootAsset.ConfigurationID,
 		RootAsset.Gai,
 		RootAsset.ProjectID,
 		RootAsset.AssetID,
 	).VALUES(
-		configID,
+		1,
 		gai,
 		projectID,
 		assetID,
@@ -347,14 +308,12 @@ func GetRootAssetId(ctx context.Context, projectID, gai string) (*int32, error) 
 	return &dest.ID, nil
 }
 
-func ConfigHasRootAsset(configID int64) (bool, error) {
+func RootAssetAlreadyCreated() (bool, error) {
 	var dest struct {
 		ID int32
 	}
 	stmt := RootAsset.SELECT(
 		RootAsset.ID,
-	).WHERE(
-		RootAsset.ConfigurationID.EQ(Int(configID)),
 	)
 	err := stmt.QueryContext(context.Background(), GetDB().db, &dest)
 	if errors.Is(err, qrm.ErrNoRows) {

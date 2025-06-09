@@ -70,7 +70,7 @@ func newRootAssetTableImpl(schemaName, tableName, alias string) rootAssetTable {
 		AssetIDColumn         = postgres.IntegerColumn("asset_id")
 		allColumns            = postgres.ColumnList{IDColumn, ConfigurationIDColumn, ProjectIDColumn, GaiColumn, AssetIDColumn}
 		mutableColumns        = postgres.ColumnList{ConfigurationIDColumn, ProjectIDColumn, GaiColumn, AssetIDColumn}
-		defaultColumns        = postgres.ColumnList{IDColumn, ConfigurationIDColumn}
+		defaultColumns        = postgres.ColumnList{}
 	)
 
 	return rootAssetTable{

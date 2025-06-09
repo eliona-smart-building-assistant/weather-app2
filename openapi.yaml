@@ -53,46 +53,9 @@ paths:
     get:
       tags:
         - Configuration
-      summary: Get configurations
-      description: Gets information about all configurations.
-      operationId: getConfigurations
-      responses:
-        "200":
-          description: Successfully returned all configurations
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Configuration"
-    post:
-      tags:
-        - Configuration
-      summary: Creates a configuration
-      description: Creates a configuration.
-      operationId: postConfiguration
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/Configuration"
-      responses:
-        "201":
-          description: Successfully created a configuration
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Configuration"
-
-  /configs/{config-id}:
-    get:
-      tags:
-        - Configuration
       summary: Get configuration
-      description: Gets information about the configuration with the given id
-      parameters:
-        - $ref: "#/components/parameters/config-id"
-      operationId: getConfigurationById
+      description: Gets information about configuration.
+      operationId: getConfiguration
       responses:
         "200":
           description: Successfully returned configuration
@@ -105,11 +68,9 @@ paths:
     put:
       tags:
         - Configuration
-      summary: Updates a configuration
-      description: Updates a configuration
-      parameters:
-        - $ref: "#/components/parameters/config-id"
-      operationId: putConfigurationById
+      summary: Updates the configuration
+      description: Updates the configuration
+      operationId: putConfiguration
       requestBody:
         content:
           application/json:
@@ -117,24 +78,11 @@ paths:
               $ref: "#/components/schemas/Configuration"
       responses:
         "200":
-          description: Successfully updated a configuration
+          description: Successfully updated configuration
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Configuration"
-    delete:
-      tags:
-        - Configuration
-      summary: Deletes a configuration
-      description: Removes information about the configuration with the given id
-      parameters:
-        - $ref: "#/components/parameters/config-id"
-      operationId: deleteConfigurationById
-      responses:
-        "204":
-          description: Successfully deleted configured configuration
-        "400":
-          description: Bad request
 
   /version:
     get:

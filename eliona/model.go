@@ -49,7 +49,7 @@ func (r *Root) GetAssetID(projectID string) (*int32, error) {
 }
 
 func (r *Root) SetAssetID(assetID int32, projectID string) error {
-	return conf.UpsertRootAsset(r.Config.Id, assetID, projectID, r.GetGAI())
+	return conf.UpsertRootAsset(assetID, projectID, r.GetGAI())
 }
 
 func (r *Root) GetLocationalParentGAI() string {
