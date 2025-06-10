@@ -6,11 +6,121 @@
 			"subtype": "input",
 			"translation": {
 				"de": "Temperatur",
-				"en": "Temperature"
+				"en": "Temperature",
+				"fr": "Température",
+				"it": "Temperatura"
 			},
 			"type": "temperature",
 			"isDigital": false,
 			"unit": "°C"
+		},
+		{
+			"name": "feels_like",
+			"enable": true,
+			"subtype": "input",
+			"translation": {
+				"de": "Gefühlte Temperatur",
+				"en": "Feels Like",
+				"fr": "Ressenti",
+				"it": "Percezione"
+			},
+			"type": "temperature",
+			"isDigital": false,
+			"unit": "°C"
+		},
+		{
+			"name": "pressure",
+			"enable": true,
+			"subtype": "input",
+			"translation": {
+				"de": "Luftdruck",
+				"en": "Pressure",
+				"fr": "Pression",
+				"it": "Pressione"
+			},
+			"type": "pressure",
+			"isDigital": false,
+			"unit": "hPa"
+		},
+		{
+			"name": "humidity",
+			"enable": true,
+			"subtype": "input",
+			"translation": {
+				"de": "Luftfeuchtigkeit",
+				"en": "Humidity",
+				"fr": "Humidité",
+				"it": "Umidità"
+			},
+			"type": "humidity",
+			"isDigital": false,
+			"unit": "%"
+		},
+		{
+			"name": "dew_point",
+			"enable": true,
+			"subtype": "input",
+			"translation": {
+				"de": "Taupunkt",
+				"en": "Dew Point",
+				"fr": "Point de rosée",
+				"it": "Punto di rugiada"
+			},
+			"type": "temperature",
+			"isDigital": false,
+			"unit": "°C"
+		},
+		{
+			"name": "uvi",
+			"enable": true,
+			"subtype": "input",
+			"translation": {
+				"de": "UV-Index",
+				"en": "UV Index",
+				"fr": "Index UV",
+				"it": "Indice UV"
+			},
+			"isDigital": false,
+			"unit": ""
+		},
+		{
+			"name": "clouds",
+			"enable": true,
+			"subtype": "input",
+			"translation": {
+				"de": "Bewölkung",
+				"en": "Clouds",
+				"fr": "Nuages",
+				"it": "Nuvolosità"
+			},
+			"isDigital": false,
+			"unit": "%"
+		},
+		{
+			"name": "wind_speed",
+			"enable": true,
+			"subtype": "input",
+			"translation": {
+				"de": "Windgeschwindigkeit",
+				"en": "Wind Speed",
+				"fr": "Vitesse du vent",
+				"it": "Velocità del vento"
+			},
+			"isDigital": false,
+			"unit": "m/s"
+		},
+		{
+			"name": "wind_deg",
+			"enable": true,
+			"subtype": "input",
+			"translation": {
+				"de": "Windrichtung",
+				"en": "Wind Direction",
+				"fr": "Direction du vent",
+				"it": "Direzione del vento"
+			},
+			"isDigital": false,
+			"unit": "°"
 		},
 		{
 			"name": "name",

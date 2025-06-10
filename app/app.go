@@ -193,14 +193,54 @@ func isConfigChanged(newConfig appmodel.Configuration) bool {
 	return false
 }
 
+func triggerReload() {
+	select {
+	case configChangeChan <- struct{}{}:
+		log.Debug("app", "Triggered reload via config change signal")
+	default:
+		log.Debug("app", "Could not trigger reload, channel full")
+	}
+}
+
 func collectResources(ctx context.Context, config *appmodel.Configuration) error {
 	if err := createRootAsset(config); err != nil {
 		log.Error("app", "creating root asset for config %v in Eliona: %v", config.Id, err)
 		return err
 	}
 
-	// Do the magic here
+	assets, err := dbhelper.GetAssets(ctx)
+	if err != nil {
+		log.Error("dbhelper", "getting assets: %v", err)
+		return err
+	}
+	for _, asset := range assets {
+		weather, err := broker.GetWeather(asset.Lat, asset.Lon, config.ApiKey)
+		if err != nil {
+			log.Error("broker", "getting weather data: %v", err)
+			return err
+		}
+		weatherMap := weatherDataToMap(weather)
+		if err := eliona.UpsertData(asset.AssetID, weatherMap, time.Now(), api.SUBTYPE_INPUT); err != nil {
+			log.Error("eliona", "upserting data for asset %v: %v", asset.AssetID, err)
+			return err
+		}
+	}
+
 	return nil
+}
+
+func weatherDataToMap(data broker.WeatherData) map[string]any {
+	weatherMap := make(map[string]any)
+	weatherMap["temperature"] = data.Current.Temp
+	weatherMap["feels_like"] = data.Current.FeelsLike
+	weatherMap["pressure"] = data.Current.Pressure
+	weatherMap["humidity"] = data.Current.Humidity
+	weatherMap["dew_point"] = data.Current.DewPoint
+	weatherMap["uvi"] = data.Current.Uvi
+	weatherMap["clouds"] = data.Current.Clouds
+	weatherMap["wind_speed"] = data.Current.WindSpeed
+	weatherMap["wind_deg"] = data.Current.WindDeg
+	return weatherMap
 }
 
 func createRootAsset(config *appmodel.Configuration) error {
@@ -236,6 +276,7 @@ func ListenForOutputChanges() {
 			asset, err := dbhelper.GetAssetById(output.AssetId)
 			if errors.Is(err, dbhelper.ErrNotFound) {
 				handleNewAsset(output)
+				triggerReload()
 				continue
 			} else if err != nil {
 				log.Error("dbhelper", "getting asset by assetID %v: %v", output.AssetId, err)
@@ -244,6 +285,7 @@ func ListenForOutputChanges() {
 			}
 
 			handleExistingAsset(output, asset)
+			triggerReload()
 		}
 
 		time.Sleep(time.Second * 5)

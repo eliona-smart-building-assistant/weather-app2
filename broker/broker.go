@@ -50,23 +50,23 @@ type Geolocation struct {
 }
 
 type WeatherData struct {
-	Lat      float64 `json:"lat"`
-	Lon      float64 `json:"lon"`
-	Timezone string  `json:"timezone"`
-	Current  struct {
-		Dt   int `json:"dt"`
-		Temp struct {
-			Day   float64 `json:"day"`
-			Min   float64 `json:"min"`
-			Max   float64 `json:"max"`
-			Night float64 `json:"night"`
-			Eve   float64 `json:"eve"`
-			Morn  float64 `json:"morn"`
-		} `json:"temp"`
-		Weather []struct {
+	Current struct {
+		Dt         int64   `json:"dt"`
+		Sunrise    int64   `json:"sunrise"`
+		Sunset     int64   `json:"sunset"`
+		Temp       float64 `json:"temp"`
+		FeelsLike  float64 `json:"feels_like"`
+		Pressure   int     `json:"pressure"`
+		Humidity   int     `json:"humidity"`
+		DewPoint   float64 `json:"dew_point"`
+		Uvi        float64 `json:"uvi"`
+		Clouds     int     `json:"clouds"`
+		Visibility int     `json:"visibility"`
+		WindSpeed  float64 `json:"wind_speed"`
+		WindDeg    int     `json:"wind_deg"`
+		Weather    []struct {
 			Main        string `json:"main"`
 			Description string `json:"description"`
-			Icon        string `json:"icon"`
 		} `json:"weather"`
 	} `json:"current"`
 }
@@ -102,34 +102,35 @@ func getGeolocation(location string, apiKey string) ([]Geolocation, error) {
 	return geolocations, nil
 }
 
-func getWeather(lat, lon float64, apiKey string) (*WeatherData, error) {
+func GetWeather(lat, lon float64, apiKey string) (WeatherData, error) {
 	baseURL := "https://api.openweathermap.org/data/3.0/onecall"
 	params := url.Values{}
 	params.Add("lat", fmt.Sprintf("%f", lat))
 	params.Add("lon", fmt.Sprintf("%f", lon))
 	params.Add("exclude", "minutely,hourly,daily,alerts")
+	params.Add("units", "metric")
 	params.Add("appid", apiKey)
 
 	resp, err := http.Get(fmt.Sprintf("%s?%s", baseURL, params.Encode()))
 	if err != nil {
-		return nil, fmt.Errorf("failed to make request: %v", err)
+		return WeatherData{}, fmt.Errorf("failed to make request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %v", err)
+		return WeatherData{}, fmt.Errorf("failed to read response body: %v", err)
 	}
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
-		return nil, fmt.Errorf("unsuccessful response: %s: %v", resp.Status, string(body))
+		return WeatherData{}, fmt.Errorf("unsuccessful response: %s: %v", resp.Status, string(body))
 	}
 
 	var weatherData WeatherData
 	err = json.Unmarshal(body, &weatherData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
+		return WeatherData{}, fmt.Errorf("failed to unmarshal response: %v", err)
 	}
 
-	return &weatherData, nil
+	return weatherData, nil
 }

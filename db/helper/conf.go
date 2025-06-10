@@ -200,13 +200,8 @@ func GetAssetId(ctx context.Context, config appmodel.Configuration, projectID, a
 	return &dest.ID, nil
 }
 
-type assetWithConfig struct {
-	model.Asset
-	model.Configuration
-}
-
 func GetAssetById(assetId int32) (appmodel.Asset, error) {
-	var asset assetWithConfig
+	var asset model.Asset
 	err := SELECT(
 		Asset.AllColumns,
 	).FROM(
@@ -220,7 +215,28 @@ func GetAssetById(assetId int32) (appmodel.Asset, error) {
 		return appmodel.Asset{}, fmt.Errorf("fetching asset %v: %v", assetId, err)
 	}
 
-	return toAppAsset(asset.Asset), nil
+	return toAppAsset(asset), nil
+}
+
+func GetAssets(ctx context.Context) ([]appmodel.Asset, error) {
+	var assets []model.Asset
+	err := SELECT(
+		Asset.AllColumns,
+	).FROM(
+		Asset,
+	).QueryContext(ctx, GetDB().db, &assets)
+	if errors.Is(err, qrm.ErrNoRows) {
+		return nil, ErrNotFound
+	} else if err != nil {
+		return nil, fmt.Errorf("fetching assets: %v", err)
+	}
+
+	var appAssets []appmodel.Asset
+	for _, a := range assets {
+		appAssets = append(appAssets, toAppAsset(a))
+	}
+	return appAssets, nil
+
 }
 
 func toAppConfig(dbCfg model.Configuration) (appmodel.Configuration, error) {
