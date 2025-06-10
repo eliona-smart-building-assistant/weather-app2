@@ -69,8 +69,6 @@ func Initialize() {
 		asset.InitAssetTypeFiles("resources/asset-types/*.json"),
 		dashboard.InitWidgetTypeFiles("resources/widget-types/*.json"),
 	)
-	fmt.Println(initAssetCategory()(conn))
-	fmt.Println(asset.InitAssetTypeFiles("resources/asset-types/*.json")(conn))
 }
 
 func initAssetCategory() func(db.Connection) error {
