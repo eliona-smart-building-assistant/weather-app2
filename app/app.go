@@ -91,20 +91,6 @@ func initAssetCategory() func(db.Connection) error {
 							De: api.PtrString("Name"),
 						}),
 					},
-					{
-						Name: *api.PtrString("lat"),
-						Translation: *api.NewNullableTranslation(&api.Translation{
-							En: api.PtrString("Latitude"),
-							De: api.PtrString("Breitengrad"),
-						}),
-					},
-					{
-						Name: *api.PtrString("lon"),
-						Translation: *api.NewNullableTranslation(&api.Translation{
-							En: api.PtrString("Longitude"),
-							De: api.PtrString("Längengrad"),
-						}),
-					},
 				},
 			}).Execute()
 		return err
@@ -212,6 +198,7 @@ func collectResources(ctx context.Context, config *appmodel.Configuration) error
 		log.Error("app", "creating root asset for config %v in Eliona: %v", config.Id, err)
 		return err
 	}
+
 	// Do the magic here
 	return nil
 }
