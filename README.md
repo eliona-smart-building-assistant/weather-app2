@@ -16,8 +16,6 @@ This initialization can be handled by the `reset.sql` script.
 
 ### Environment variables
 
-<mark>Todo: Describe further environment variables tables the app needs for configuration</mark>
-
 - `CONNECTION_STRING`: configures the [Eliona database](https://github.com/eliona-smart-building-assistant/go-eliona/tree/main/db). Otherwise, the app can't be initialized and started (e.g. `postgres://user:pass@localhost:5432/iot`).
 
 - `INIT_CONNECTION_STRING`: configures the [Eliona database](https://github.com/eliona-smart-building-assistant/go-eliona/tree/main/db) for app initialization like creating schema and tables (e.g. `postgres://user:pass@localhost:5432/iot`). Default is content of `CONNECTION_STRING`.
@@ -31,8 +29,6 @@ This initialization can be handled by the `reset.sql` script.
 - `LOG_LEVEL`(optional): defines the minimum level that should be [logged](https://github.com/eliona-smart-building-assistant/go-utils/blob/main/log/README.md). The default level is `info`.
 
 ### Database tables ###
-
-<mark>Todo: Describe other tables if the app needs them.</mark>
 
 The app requires configuration data that remains in the database. To do this, the app creates its own database schema `weather_app` during initialization. To modify and handle the configuration data the app provides an API access. Have a look at the [API specification](https://eliona-smart-building-assistant.github.io/open-api-docs/?https://raw.githubusercontent.com/eliona-smart-building-assistant/weather-app2-app/develop/openapi.yaml) how the configuration tables should be used.
 
