@@ -1,6 +1,6 @@
 {
-  "name": "weather-app2",
-  "elionaMinVersion": "v11.0.0",
+  "name": "weather",
+  "elionaMinVersion": "v14.1.0",
   "displayName": {
     "en": "Weather",
     "de": "Weather"

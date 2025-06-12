@@ -23,11 +23,11 @@ DELETE FROM versioning.patches
 WHERE app_name = 'weather-app2';
 
 INSERT INTO public.eliona_store (app_name, category, version)
-VALUES ('weather-app2', 'app', 'v0.0.0')
+VALUES ('weather', 'app', 'v0.0.0')
 ON CONFLICT (app_name) DO UPDATE SET version = 'v0.0.0';
 
 INSERT INTO public.eliona_app (app_name, enable)
-VALUES ('weather-app2', 't')
+VALUES ('weather', 't')
 ON CONFLICT (app_name) DO UPDATE SET initialized_at = null;
 
 DROP SCHEMA IF EXISTS weather_app CASCADE;
