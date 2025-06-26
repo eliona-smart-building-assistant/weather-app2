@@ -1,46 +1,46 @@
-# Weather User Guide
+# Weather App User Guide
 
-### Introduction
-
-> The Weather app provides Eliona with weather data from OpenWeatherMap.
+## Introduction
+The Weather App integrates OpenWeatherMap data with Eliona, providing real-time weather information for location-based analytics and energy optimization.
 
 ## Overview
-
-This guide provides instructions on configuring, installing, and using the Weather app to manage resources and get weather data from OpenWeatherMap.
+This comprehensive guide covers installation, configuration, asset management, and troubleshooting for the Weather App.
 
 ## Installation
-
-Install the Weather app via the Eliona App Store.
+1. Navigate to the Eliona App Store
+2. Search for "Weather App"
+3. Click "Install" and confirm the installation
+4. Wait for the installation confirmation (typically 1-2 minutes)
 
 ## Configuration
 
-The Weather app requires configuration through Eliona’s settings interface. Below are the general steps and details needed to configure the app.
+### OpenWeatherMap Registration
+1. Visit [OpenWeatherMap](https://openweathermap.org/) and create an account
+2. Subscribe to the "One Call API 3.0" service (free tier available)
+3. Generate your API key in the Account Dashboard
+4. Note your API key for Eliona configuration
 
-### Registering in OpenWeatherMap
+### App Configuration Parameters
 
-Create credentials in [OpenWeatherMap](openweathermap.org). Subscribe to One Call API 3.0 (free for most types of usage in Eliona) or other subscription allowing access to current weather data.
+| Parameter | Description | Required | Default Value |
+|-----------|-------------|----------|---------------|
+| `apiKey` | Your OpenWeatherMap API key | Yes | - |
+| `enable` | Enable/disable the configuration | Yes | true |
+| `refreshInterval` | Data synchronization interval (seconds) | Yes | 300 |
+| `requestTimeout` | API request timeout (seconds) | No | 120 |
+| `projectIDs` | Eliona project IDs for data collection | Yes | - |
 
-Create an API key and save it to use in the Eliona app configuration (section below).
-
-### Configure the Weather app
-
-Configurations can be created in Eliona under `Settings > Apps > Weather` which opens the app's [Generic Frontend](https://doc.eliona.io/collection/v/eliona-english/manuals/settings/apps). Here you can use the config endpoint with the PUT method. Configuration requires the following data:
-
-| Attribute         | Description                                                                     |
-|-------------------|---------------------------------------------------------------------------------|
-| `apiKey`          | OpenWeatherMap API key obtained in the previous step.                          |
-| `enable`          | Flag to enable or disable this configuration.                                   |
-| `refreshInterval` | Interval in seconds for data synchronization.                                   |
-| `requestTimeout`  | API query timeout in seconds.                                                   |
-| `projectIDs`      | List of Eliona project IDs for data collection.                                 |
-
-Example configuration JSON:
+### Configuration Steps
+1. Navigate to `Settings > Apps > Weather` in Eliona
+2. Access the Generic Frontend interface
+3. Use the config endpoint with PUT method
+4. Enter your configuration in JSON format:
 
 ```json
 {
-  "apiKey": "random-cl13nt-s3cr3t",
+  "apiKey": "your-api-key-here",
   "enable": true,
-  "refreshInterval": 60,
+  "refreshInterval": 300,
   "requestTimeout": 120,
   "projectIDs": [
     "10"
@@ -48,16 +48,86 @@ Example configuration JSON:
 }
 ```
 
-## Asset Creation
+## Asset Management
 
-Once configured, the app creates a `weather-app-weather` asset type. You can create any number of assets of this asset type, each representing a location to be provided with weather.
+### Asset Type
+The app creates a `Weather` asset type representing weather monitoring locations.
 
-## Configuring weather location
+### Creating Weather Assets
+1. Navigate to Assets in Eliona
+2. Click "Create New Asset"
+3. Select "Weather" as the asset type
+4. Configure basic asset properties
+5. Save the new asset
 
-With the aforementioned assets, you can specify the location. Go to the asset, click the edit button, and set the location name in "more info" section. After saving, you can refresh the page, and you should see (under "more info" section) the location you input along with state and country information, to confirm that the app found the correct location. If not, please be more specific in the location name and try again.
+### Configuring Location
+1. Open your weather asset
+2. Click the edit button
+3. In the "More Info" section:
+   - Enter the location name (e.g., "Zurich, Switzerland")
+   - For best results, use format: "City, Country" or "City, State, Country"
+4. Save the configuration
+5. Refresh the page to verify:
+   - Location name appears with additional geographic details
+   - Weather data begins populating the asset attributes
 
-The asset will then be provided with current weather for the location, which could be used in analytics, energy optimizations and so on.
+### Location Troubleshooting
+If the location isn't found:
+1. Try more specific location names
+2. Include country or state information
+3. Verify the location exists in OpenWeatherMap's database
+4. Check for typos in the location name
 
-## App status monitoring
+## Weather Data Attributes
 
-Along with asset creation, an asset called "Weather root" is also created. It's purpose is to inform users of the app status -- It signalizes whether the app is running (Asset status -> Active/Inactive) and it's status - the Status attribute. If the app status is not "OK", it signifies that the app might not be functioning properly. If the error state persists, let us know by submitting a bug report.
+The app provides these weather properties:
+
+| Attribute | Description | Unit |
+|-----------|-------------|------|
+| temperature | Current air temperature | °C |
+| feels_like | Perceived temperature accounting for wind and humidity | °C |
+| pressure | Atmospheric pressure at the location | hPa |
+| humidity | Relative humidity percentage | % |
+| dew_point | Temperature at which dew forms | °C |
+| uvi | Ultraviolet index indicating sun exposure risk | - |
+| clouds | Percentage of cloud cover | % |
+| wind_speed | Current wind speed | m/s |
+| wind_deg | Wind direction in degrees (0-360) | ° |
+
+## App Status Monitoring
+
+The app creates a "Weather Root" asset that provides:
+
+### Status Indicators
+- **Asset Status**: Shows Active/Inactive state
+- **Status Attribute**: Current operational status with possible values:
+
+| Status | Description | Recommended Action |
+|--------|-------------|-------------------|
+| OK | Normal operation | None required |
+| API_ERROR | OpenWeatherMap API issue | Verify API key and network connection |
+| CONFIG_ERROR | Configuration problem | Review app configuration |
+| RATE_LIMIT | API rate limit exceeded | Increase refresh interval or upgrade API plan |
+| NETWORK_ERROR | Connection problem | Check network settings |
+
+## Use Cases
+
+### Building Energy Optimization
+- Adjust HVAC systems based on outdoor temperature
+- Optimize cooling systems using humidity data
+- Implement natural ventilation strategies based on wind conditions
+
+### Renewable Energy Management
+- Predict solar generation using cloud cover data
+- Adjust wind turbine operations based on wind speed/direction
+- Implement weather-aware energy storage strategies
+
+### Facility Management
+- Plan maintenance activities around weather conditions
+- Implement weather-based cleaning schedules
+- Optimize landscape irrigation based on precipitation forecasts
+
+### Analytics and Reporting
+- Correlate energy usage with weather patterns
+- Generate weather impact reports
+- Create predictive models for energy consumption
