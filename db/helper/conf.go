@@ -139,7 +139,8 @@ func GetConfig(ctx context.Context) (appmodel.Configuration, error) {
 
 func SetConfigActiveState(ctx context.Context, state bool) error {
 	stmt := Configuration.UPDATE(Configuration.Active).
-		SET(state)
+		SET(state).
+		WHERE(Bool(true))
 	_, err := stmt.ExecContext(ctx, GetDB().db)
 	return err
 }
