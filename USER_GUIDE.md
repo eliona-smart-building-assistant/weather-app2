@@ -3,8 +3,7 @@
 ## Introduction
 The Weather App integrates OpenWeatherMap data with Eliona, providing real-time weather information for location-based analytics and energy optimization.
 
-## Overview
-This comprehensive guide covers installation, configuration, asset management, and troubleshooting for the Weather App.
+![App schema](https://raw.githubusercontent.com/eliona-smart-building-assistant/weather-app2/refs/heads/develop/schema.png "App schema")
 
 ## Installation
 1. Navigate to the Eliona App Store
