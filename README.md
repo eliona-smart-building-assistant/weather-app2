@@ -2,6 +2,8 @@
 
 The Weather app is used to provide current weather data and forecasts to Eliona for analysis and control of weather's influence on energy management.
 
+[![Weather app walkthrough](https://github.com/eliona-smart-building-assistant/weather-app2/raw/refs/heads/develop/weather-app.mp4)]
+
 ## Configuration
 
 The app needs environment variables and database tables for configuration. To edit the database tables the app provides an own API access.
@@ -24,7 +26,7 @@ This initialization can be handled by the `reset.sql` script.
 
 - `API_TOKEN`: defines the secret to authenticate the app and access the Eliona API.
 
-- `API_SERVER_PORT`(optional): define the port the API server listens. The default value is Port `3000`. <mark>Todo: Decide if the app needs its own API. If so, an API server have to implemented and the port have to be configurable.</mark>
+- `API_SERVER_PORT`(optional): define the port the API server listens. The default value is Port `3000`.
 
 - `LOG_LEVEL`(optional): defines the minimum level that should be [logged](https://github.com/eliona-smart-building-assistant/go-utils/blob/main/log/README.md). The default level is `info`.
 
@@ -56,10 +58,7 @@ This app creates Eliona asset types and attribute sets during initialization.
 
 The data is written for each device, structured into different subtypes of Eliona assets. The following subtypes are defined:
 
-- `Info`: Static data which provides information about a device like address and firmware info.
-- `Status`: Device status information, like battery level.
 - `Input`: Current values reported by sensors.
-- `Output`: Values that are to be passed back to the provider.
 
 ### Continuous asset creation ###
 
