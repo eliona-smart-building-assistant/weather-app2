@@ -2,7 +2,7 @@
 
 The Weather app is used to provide current weather data and forecasts to Eliona for analysis and control of weather's influence on energy management.
 
-[![Weather app walkthrough](https://github.com/eliona-smart-building-assistant/weather-app2/raw/refs/heads/develop/weather-app.mp4)]
+https://github.com/user-attachments/assets/6ec662e4-69f3-4155-b2a9-f83c3839ed65
 
 ## Configuration
 
