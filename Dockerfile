@@ -29,10 +29,8 @@ RUN DATE=$(date) && \
 FROM eliona/base-alpine:latest AS target
 
 COPY --from=build /app-build ./
-COPY db/*.sql ./db/
 COPY resources/ ./resources/
 COPY openapi.yaml ./
-COPY metadata.json ./
 
 ENV TZ=Europe/Zurich
 CMD [ "/app-build" ]
