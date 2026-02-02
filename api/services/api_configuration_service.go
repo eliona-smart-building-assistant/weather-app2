@@ -24,7 +24,7 @@ import (
 	"weather-app2/broker"
 	dbhelper "weather-app2/db/helper"
 
-	api "github.com/eliona-smart-building-assistant/go-eliona-api-client/v2"
+	api "github.com/eliona-smart-building-assistant/go-eliona-api-client/v3"
 )
 
 // ConfigurationAPIService is a service that implements the logic for the ConfigurationAPIServicer

@@ -17,10 +17,10 @@ package main
 
 import (
 	"time"
-	"weather-app2/app"
-	dbhelper "weather-app2/db/helper"
+	"weather-app2/v2/app"
+	dbhelper "weather-app2/v2/db/helper"
 
-	elionaapp "github.com/eliona-smart-building-assistant/go-eliona/app"
+	elionaapp "github.com/eliona-smart-building-assistant/go-eliona/v2/app"
 	"github.com/eliona-smart-building-assistant/go-utils/common"
 	"github.com/eliona-smart-building-assistant/go-utils/db"
 	"github.com/eliona-smart-building-assistant/go-utils/log"

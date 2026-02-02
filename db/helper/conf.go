@@ -20,14 +20,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	appmodel "weather-app2/app/model"
+	appmodel "weather-app2/v2/app/model"
 
-	"github.com/eliona-smart-building-assistant/go-eliona/frontend"
+	"github.com/eliona-smart-building-assistant/go-eliona/v2/frontend"
 	"github.com/eliona-smart-building-assistant/go-utils/log"
 	"github.com/lib/pq"
 
-	"weather-app2/db/generated/postgres/weather_app/model"
-	. "weather-app2/db/generated/postgres/weather_app/table"
+	"weather-app2/v2/db/generated/postgres/weather_app/model"
+	. "weather-app2/v2/db/generated/postgres/weather_app/table"
 
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/qrm"
