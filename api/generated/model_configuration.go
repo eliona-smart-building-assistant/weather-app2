@@ -16,8 +16,8 @@ type Configuration struct {
 	// Internal identifier for the configured API (created automatically).
 	Id *int64 `json:"id,omitempty"`
 
-	// There should be things like API address, access keys and so on.
-	ApiKey string `json:"apiKey,omitempty"`
+	// The ID of the site.
+	SiteId string `json:"siteId,omitempty"`
 
 	// Flag to enable or disable fetching from this API
 	Enable *bool `json:"enable,omitempty"`
@@ -30,9 +30,6 @@ type Configuration struct {
 
 	// Set to `true` by the app when running and to `false` when app is stopped
 	Active *bool `json:"active,omitempty"`
-
-	// List of Eliona project ids for which this device should collect data. For each project id all smart devices are automatically created as an asset in Eliona. The mapping between Eliona is stored as an asset mapping in the Weather app.
-	ProjectIDs *[]string `json:"projectIDs,omitempty"`
 
 	// ID of the last Eliona user who created or updated the configuration
 	UserId *string `json:"userId,omitempty"`

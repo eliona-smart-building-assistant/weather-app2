@@ -175,11 +175,11 @@ components:
           description: Internal identifier for the configured API (created automatically).
           readOnly: true
           nullable: true
-        apiKey:
+        siteId:
           type: string
-          format: string
-          description: There should be things like API address, access keys and so on.
-          example: 10.10.10.101
+          format: uuid
+          description: The ID of the site.
+          example: "eb7f1610-782b-453b-84a6-839135aa2625"
         enable:
           type: boolean
           description: Flag to enable or disable fetching from this API
@@ -199,16 +199,6 @@ components:
           readOnly: true
           description: Set to `true` by the app when running and to `false` when app is stopped
           nullable: true
-        projectIDs:
-          type: array
-          description: List of Eliona project ids for which this device should collect data. For each project id all smart devices are automatically created as an asset in Eliona. The mapping between Eliona is stored as an asset mapping in the Weather app.
-          nullable: true
-          items:
-            type: string
-            x-eliona-bind: public.eliona_project.proj_id
-          example:
-            - "42"
-            - "99"
         userId:
           type: string
           readOnly: true
