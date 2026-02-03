@@ -18,14 +18,16 @@ package eliona
 import (
 	"fmt"
 	"time"
+	appmodel "weather-app2/v2/app/model"
 
 	api "github.com/eliona-smart-building-assistant/go-eliona-api-client/v3"
 	"github.com/eliona-smart-building-assistant/go-eliona/v2/asset"
+	"github.com/eliona-smart-building-assistant/go-eliona/v2/client"
 )
 
 const ClientReference string = "weather-app2"
 
-func UpsertData(assetID int32, assetData map[string]any, timestamp time.Time, subtype api.DataSubtype) error {
+func UpsertData(config appmodel.Configuration, assetID int32, assetData map[string]any, timestamp time.Time, subtype api.DataSubtype) error {
 	cr := ClientReference
 
 	data := api.Data{
@@ -36,7 +38,7 @@ func UpsertData(assetID int32, assetData map[string]any, timestamp time.Time, su
 		ClientReference: *api.NewNullableString(&cr),
 		// AssetTypeName: api.NullableString{}, No need to fill, it's only for selection
 	}
-	if err := asset.UpsertDataIfAssetExists(data); err != nil {
+	if err := asset.UpsertDataIfAssetExists(client.ApiEndpointString(), config.ApiKey, data); err != nil {
 		return fmt.Errorf("upserting data: %v", err)
 	}
 	return nil

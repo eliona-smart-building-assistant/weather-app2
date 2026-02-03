@@ -15,14 +15,17 @@
 
 package appmodel
 
+import "github.com/google/uuid"
+
 type Configuration struct {
 	Id              int64
+	TenantId        uuid.UUID
+	SiteId          string
 	ApiKey          string
 	RefreshInterval int32
 	RequestTimeout  int32
 	Enable          bool
 	Active          bool
-	ProjectIDs      []string
 	UserId          string
 }
 

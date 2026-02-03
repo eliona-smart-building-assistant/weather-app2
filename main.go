@@ -16,13 +16,13 @@
 package main
 
 import (
+	"context"
 	"time"
 	"weather-app2/v2/app"
 	dbhelper "weather-app2/v2/db/helper"
 
-	elionaapp "github.com/eliona-smart-building-assistant/go-eliona/v2/app"
+	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/eliona-smart-building-assistant/go-utils/common"
-	"github.com/eliona-smart-building-assistant/go-utils/db"
 	"github.com/eliona-smart-building-assistant/go-utils/log"
 )
 
@@ -31,16 +31,15 @@ import (
 func main() {
 	log.Info("main", "Starting the app.")
 
-	// Set default database to use boil.*G functions.
-	database := db.Database(elionaapp.AppName())
-	dbhelper.InitDB(database)
-	defer dbhelper.CloseDB()
+	// Init Database
+	pool := dbhelper.InitDefaultDB()
+	defer pool.Close(context.Background())
 
-	// Necessary to close used init resources, because db.Pool() is used in this app.
-	defer db.ClosePool()
-
-	// Initialize the app
-	app.Initialize()
+	// Set the database logging level.
+	if log.Lev() >= log.TraceLevel {
+		boil.DebugMode = true
+		boil.DebugWriter = log.GetWriter(log.TraceLevel, "database")
+	}
 
 	// Starting the service to collect the data for this app.
 	common.WaitForWithOs(

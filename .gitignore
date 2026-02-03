@@ -1,5 +1,6 @@
 *.iml
 .idea/**
+.vscode/**
 api/generated/.openapi-generator/**
 api/generated/api/**
 api/generated/*_service.go
