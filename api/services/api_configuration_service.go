@@ -19,12 +19,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	apiserver "weather-app2/api/generated"
-	appmodel "weather-app2/app/model"
-	"weather-app2/broker"
-	dbhelper "weather-app2/db/helper"
 
-	api "github.com/eliona-smart-building-assistant/go-eliona-api-client/v3"
+	apiserver "weather-app2/v2/api/generated"
+	appmodel "weather-app2/v2/app/model"
+	"weather-app2/v2/broker"
+	dbhelper "weather-app2/v2/db/helper"
+
+	"github.com/google/uuid"
 )
 
 // ConfigurationAPIService is a service that implements the logic for the ConfigurationAPIServicer
@@ -39,7 +40,13 @@ func NewConfigurationAPIService() apiserver.ConfigurationAPIServicer {
 }
 
 func (s *ConfigurationAPIService) GetConfiguration(ctx context.Context) (apiserver.ImplResponse, error) {
-	appConfig, err := dbhelper.GetConfig(ctx)
+	// not by Id, probably because there is only one configuration per tenant - we do not allow creation of another Configuration
+	tenantId, err := dbhelper.ParseTenantIdFromEnv(ctx)
+	if err != nil {
+		return apiserver.ImplResponse{Code: http.StatusBadRequest}, err
+	}
+
+	appConfig, err := dbhelper.GetTenantConfig(ctx, tenantId)
 	if err != nil {
 		return apiserver.ImplResponse{Code: http.StatusInternalServerError}, err
 	}
@@ -47,8 +54,12 @@ func (s *ConfigurationAPIService) GetConfiguration(ctx context.Context) (apiserv
 }
 
 func (s *ConfigurationAPIService) PutConfiguration(ctx context.Context, config apiserver.Configuration) (apiserver.ImplResponse, error) {
-	config.Id = api.PtrInt64(1)
-	appConfig := toAppConfig(config)
+	tenantId, err := dbhelper.ParseTenantIdFromEnv(ctx)
+	if err != nil {
+		return apiserver.ImplResponse{Code: http.StatusBadRequest}, err
+	}
+
+	appConfig := toAppConfig(config, tenantId)
 	if err := broker.TestAuthentication(appConfig); err != nil {
 		return apiserver.ImplResponse{Code: http.StatusBadRequest}, fmt.Errorf("testing authentication: %v", err)
 	}
@@ -62,18 +73,17 @@ func (s *ConfigurationAPIService) PutConfiguration(ctx context.Context, config a
 func toAPIConfig(appConfig appmodel.Configuration) apiserver.Configuration {
 	return apiserver.Configuration{
 		Id:              &appConfig.Id,
-		ApiKey:          appConfig.ApiKey,
+		SiteId:          appConfig.ApiKey,
 		Enable:          &appConfig.Enable,
 		RefreshInterval: appConfig.RefreshInterval,
 		RequestTimeout:  &appConfig.RequestTimeout,
 		Active:          &appConfig.Active,
-		ProjectIDs:      &appConfig.ProjectIDs,
 		UserId:          &appConfig.UserId,
 	}
 }
 
-func toAppConfig(apiConfig apiserver.Configuration) (appConfig appmodel.Configuration) {
-	appConfig.ApiKey = apiConfig.ApiKey
+func toAppConfig(apiConfig apiserver.Configuration, tenantId uuid.UUID) (appConfig appmodel.Configuration) {
+	appConfig.TenantId = tenantId
 
 	if apiConfig.Id != nil {
 		appConfig.Id = *apiConfig.Id
@@ -89,8 +99,7 @@ func toAppConfig(apiConfig apiserver.Configuration) (appConfig appmodel.Configur
 	if apiConfig.Enable != nil {
 		appConfig.Enable = *apiConfig.Enable
 	}
-	if apiConfig.ProjectIDs != nil {
-		appConfig.ProjectIDs = *apiConfig.ProjectIDs
-	}
+	appConfig.SiteId = apiConfig.SiteId
+
 	return appConfig
 }

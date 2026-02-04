@@ -18,7 +18,7 @@ package apiservices
 import (
 	"context"
 	"net/http"
-	apiserver "weather-app2/api/generated"
+	apiserver "weather-app2/v2/api/generated"
 )
 
 // CustomizationAPIService is a service that implements the logic for the CustomizationAPIServicer

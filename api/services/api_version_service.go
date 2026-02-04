@@ -22,7 +22,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	apiserver "weather-app2/api/generated"
+	apiserver "weather-app2/v2/api/generated"
 
 	"github.com/eliona-smart-building-assistant/go-utils/common"
 	"github.com/eliona-smart-building-assistant/go-utils/log"
