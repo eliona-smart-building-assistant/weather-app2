@@ -55,8 +55,8 @@ func changeAppStatus(status int) {
 
 func initAssetCategory() func(db.Connection) error {
 	return func(db.Connection) error {
-		_, _, err := client.NewClient().AssetTypesAPI.
-			PutAssetTypeCategory(client.AuthenticationContext()).
+		_, _, err := client.NewClient(client.ApiEndpointString()).AssetTypesAPI.
+			PutAssetTypeCategory(client.AuthenticationContext(client.ApiEndpointString())).
 			AssetTypeCategory(api.AssetTypeCategory{
 				Name: "weather-app-location",
 				Translation: *api.NewNullableTranslation(&api.Translation{
@@ -214,7 +214,7 @@ func collectResources(ctx context.Context, config *appmodel.Configuration) error
 			return err
 		}
 		weatherMap := weatherDataToMap(weather)
-		if err := eliona.UpsertData(config, asset.AssetID, weatherMap, time.Now(), api.INPUT); err != nil {
+		if err := eliona.UpsertData(*config, asset.AssetID, weatherMap, time.Now(), api.INPUT); err != nil {
 			log.Error("eliona", "upserting data for asset %v: %v", asset.AssetID, err)
 			return err
 		}
@@ -238,12 +238,12 @@ func weatherDataToMap(data broker.WeatherData) map[string]any {
 }
 
 func createRootAsset(config *appmodel.Configuration) error {
-	if hasRoot, err := dbhelper.RootAssetAlreadyCreated(); err != nil {
+	if hasRoot, err := dbhelper.RootAssetAlreadyCreated(config.TenantId); err != nil {
 		return fmt.Errorf("finding whether config already has root asset: %v", err)
 	} else if hasRoot {
 		return nil
 	}
-	var assets []asset.AssetWithParentReferences
+	var assets []asset.AssetLikeWithParentReferences
 	root := eliona.Root{Config: config}
 	assets = append(assets, &root)
 	if err := eliona.CreateAssets(*config, assets); err != nil {
@@ -254,6 +254,9 @@ func createRootAsset(config *appmodel.Configuration) error {
 
 // ListenForOutputChanges listens to output attribute changes from Eliona. Delete if not needed.
 func ListenForOutputChanges() {
+
+	//configs, err := dbhelper.GetConfigs(context.Background())
+
 	for {
 		outputs, err := eliona.ListenForPropertyChanges()
 		if err != nil {
@@ -269,7 +272,7 @@ func ListenForOutputChanges() {
 
 			asset, err := dbhelper.GetAssetById(output.AssetId)
 			if errors.Is(err, dbhelper.ErrNotFound) {
-				handleNewAsset(output)
+				handleNewAsset(output, config)
 				triggerReload()
 				continue
 			} else if err != nil {
@@ -286,10 +289,10 @@ func ListenForOutputChanges() {
 	}
 }
 
-func handleNewAsset(output api.Data) {
+func handleNewAsset(output api.Data, config appmodel.Configuration) {
 	log.Debug("app", "received data update for new asset %v: %+v", output.AssetId, output)
 
-	elionaAsset, err := eliona.GetAsset(output.AssetId)
+	elionaAsset, err := eliona.GetAsset(output.AssetId, config)
 	if err != nil {
 		log.Error("eliona", "getting asset ID %v: %v", output.AssetId, err)
 		return
@@ -305,7 +308,7 @@ func handleNewAsset(output api.Data) {
 		return
 	}
 
-	config, err := dbhelper.GetConfig(context.Background())
+	config, err := dbhelper.GetTenantConfig(context.Background())
 	if err != nil {
 		log.Error("dbhelper", "getting config: %v", err)
 		changeAppStatus(statusError)
@@ -320,12 +323,12 @@ func handleNewAsset(output api.Data) {
 
 	locationNameFormatted := formatLocationName(location)
 
-	if err := eliona.UpsertData(elionaAsset.GetId(), map[string]any{"name": locationNameFormatted}, time.Now(), api.SUBTYPE_PROPERTY); err != nil {
+	if err := eliona.UpsertData(config, elionaAsset.GetId(), map[string]any{"name": locationNameFormatted}, time.Now(), api.PROPERTY); err != nil {
 		log.Error("eliona", "updating asset %v location name: %v", elionaAsset.GetId(), err)
 		return
 	}
 
-	if err := dbhelper.InsertAsset(client.AuthenticationContext(), appmodel.Asset{
+	if err := dbhelper.InsertAsset(client.AuthenticationContext(config.ApiKey), config, appmodel.Asset{
 		ProjectID:    elionaAsset.ProjectId,
 		AssetID:      elionaAsset.GetId(),
 		LocationName: locationNameFormatted,
@@ -344,7 +347,7 @@ func handleExistingAsset(output api.Data, asset appmodel.Asset) {
 		return
 	}
 
-	config, err := dbhelper.GetConfig(context.Background())
+	config, err := dbhelper.GetTenantConfig(context.Background())
 	if err != nil {
 		log.Error("dbhelper", "getting config: %v", err)
 		changeAppStatus(statusError)
@@ -359,7 +362,7 @@ func handleExistingAsset(output api.Data, asset appmodel.Asset) {
 
 	locationNameFormatted := formatLocationName(location)
 
-	if err := eliona.UpsertData(asset.AssetID, map[string]any{"name": locationNameFormatted}, time.Now(), api.SUBTYPE_PROPERTY); err != nil {
+	if err := eliona.UpsertData(config, asset.AssetID, map[string]any{"name": locationNameFormatted}, time.Now(), api.PROPERTY); err != nil {
 		log.Error("eliona", "updating asset %v location name: %v", asset.AssetID, err)
 		return
 	}
@@ -406,7 +409,8 @@ func Heartbeat() {
 }
 
 func heartbeat(config appmodel.Configuration) {
-	roots, err := dbhelper.GetRootAssets(config.TenantId)
+	// filter root assets to tenant?
+	roots, err := dbhelper.GetRootAssets()
 	if err != nil {
 		log.Error("dbhelper", "getting root assets: %v", err)
 		return

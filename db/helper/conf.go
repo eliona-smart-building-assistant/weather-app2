@@ -18,7 +18,6 @@ package dbhelper
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	appmodel "weather-app2/v2/app/model"
@@ -30,7 +29,6 @@ import (
 	"github.com/eliona-smart-building-assistant/go-eliona/v2/frontend"
 	"github.com/eliona-smart-building-assistant/go-utils/common"
 	"github.com/eliona-smart-building-assistant/go-utils/log"
-	"github.com/go-jet/jet/v2/qrm"
 	"github.com/google/uuid"
 )
 
@@ -38,34 +36,19 @@ var ErrBadRequest = errors.New("bad request")
 var ErrNotFound = errors.New("not found")
 
 func UpsertConfig(ctx context.Context, config appmodel.Configuration) (appmodel.Configuration, error) {
+	// we assume unique 1 config per 1 tenant
 	dbConfig, err := toDbConfig(ctx, config)
 	if err != nil {
 		return appmodel.Configuration{}, fmt.Errorf("creating DB config from App config: %v", err)
 	}
-	if err := dbConfig.UpsertG(ctx, true, []string{"id"}, boil.Blacklist("id"), boil.Infer()); err != nil {
+	if err := dbConfig.UpsertG(ctx, true, []string{"tenant_id"}, boil.Blacklist("id"), boil.Infer()); err != nil {
 		return appmodel.Configuration{}, fmt.Errorf("inserting DB config: %v", err)
 	}
 	return config, nil
 }
 
-func GetConfig(ctx context.Context, configID int64) (appmodel.Configuration, error) {
-	dbConfig, err := dbgen.FindConfigurationG(ctx, configID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return appmodel.Configuration{}, ErrNotFound
-	}
-	if err != nil {
-		return appmodel.Configuration{}, fmt.Errorf("fetching config from database: %v", err)
-	}
-	appConfig, err := toAppConfig(dbConfig)
-	if err != nil {
-		return appmodel.Configuration{}, fmt.Errorf("creating App config from DB config: %v", err)
-	}
-	return appConfig, nil
-}
-
-func GetTenantConfig(ctx context.Context, configID int64, tenantId uuid.UUID) (appmodel.Configuration, error) {
+func GetTenantConfig(ctx context.Context, tenantId uuid.UUID) (appmodel.Configuration, error) {
 	dbConfig, err := dbgen.Configurations(
-		dbgen.ConfigurationWhere.ID.EQ(configID),
 		dbgen.ConfigurationWhere.TenantID.EQ(tenantId.String()),
 	).OneG(ctx)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -97,61 +80,6 @@ func GetConfigs(ctx context.Context) ([]appmodel.Configuration, error) {
 	return appConfigs, nil
 }
 
-func GetTenantConfigs(ctx context.Context, tenantId uuid.UUID) ([]appmodel.Configuration, error) {
-	dbConfigs, err := dbgen.Configurations(
-		dbgen.ConfigurationWhere.TenantID.EQ(tenantId.String()),
-	).AllG(ctx)
-	if err != nil {
-		return nil, err
-	}
-	var appConfigs []appmodel.Configuration
-	for _, dbConfig := range dbConfigs {
-		ac, err := toAppConfig(dbConfig)
-		if err != nil {
-			return nil, fmt.Errorf("creating App config from DB config: %v", err)
-		}
-		appConfigs = append(appConfigs, ac)
-	}
-	return appConfigs, nil
-}
-
-func DeleteConfig(ctx context.Context, configID int64, tenantId uuid.UUID) error {
-	// First, verify that the configuration exists and belongs to the specified tenant
-	configExists, err := dbgen.Configurations(
-		dbgen.ConfigurationWhere.ID.EQ(configID),
-		dbgen.ConfigurationWhere.TenantID.EQ(tenantId.String()),
-	).ExistsG(ctx)
-	if err != nil {
-		return fmt.Errorf("checking config existence: %v", err)
-	}
-	if !configExists {
-		return ErrNotFound
-	}
-
-	// Delete assets that belong to this configuration
-	if _, err := dbgen.Assets(
-		dbgen.AssetWhere.ConfigurationID.EQ(configID),
-	).DeleteAllG(ctx); err != nil {
-		return fmt.Errorf("deleting assets from database: %v", err)
-	}
-
-	// Delete the configuration that matches both configID and tenantId
-	count, err := dbgen.Configurations(
-		dbgen.ConfigurationWhere.ID.EQ(configID),
-		dbgen.ConfigurationWhere.TenantID.EQ(tenantId.String()),
-	).DeleteAllG(ctx)
-	if err != nil {
-		return fmt.Errorf("deleting config from database: %v", err)
-	}
-	if count > 1 {
-		return fmt.Errorf("shouldn't happen: deleted more (%v) configs by ID and tenant", count)
-	}
-	if count == 0 {
-		return ErrNotFound
-	}
-	return nil
-}
-
 func SetConfigActiveState(ctx context.Context, config appmodel.Configuration, state bool) (int64, error) {
 	return dbgen.Configurations(
 		dbgen.ConfigurationWhere.ID.EQ(config.Id),
@@ -161,133 +89,121 @@ func SetConfigActiveState(ctx context.Context, config appmodel.Configuration, st
 }
 
 func InsertAsset(ctx context.Context, asset appmodel.Asset) error {
-	stmt := Asset.INSERT(
-		Asset.ProjectID,
-		Asset.AssetID,
-		Asset.LocationName,
-		Asset.Lat,
-		Asset.Lon,
-	).VALUES(
-		asset.ProjectID,
-		asset.AssetID,
-		asset.LocationName,
-		asset.Lat,
-		asset.Lon,
-	).ON_CONFLICT(
-		Asset.AssetID,
-	).DO_NOTHING()
-
-	_, err := stmt.ExecContext(ctx, GetDB().db)
-	return err
-}
-
-// rework the old to new
-func InsertAsset(ctx context.Context, config appmodel.Configuration, globalAssetID string, assetId int32, providerId string, isRoot bool) error {
 	dbAsset := dbgen.Asset{
-		ConfigurationID: config.Id,
-		GlobalAssetID:   globalAssetID,
-		AssetID:         null.Int32From(assetId),
-		ProviderID:      providerId,
-		IsRoot:          isRoot,
+		ProjectID:    asset.ProjectID,
+		LocationName: asset.LocationName,
+		Lat:          asset.Lat,
+		Lon:          asset.Lon,
+		AssetID:      asset.AssetID,
 	}
-	return dbAsset.UpsertG(ctx, true, []string{dbgen.AssetColumns.ProviderID}, boil.Blacklist("id"), boil.Infer())
+	return dbAsset.UpsertG(ctx, true, []string{dbgen.AssetColumns.AssetID}, boil.Blacklist("id"), boil.Infer())
 }
 
 func UpdateAssetLocation(ctx context.Context, asset appmodel.Asset) error {
-	stmt := Asset.UPDATE(
-		Asset.LocationName,
-		Asset.Lat,
-		Asset.Lon,
-	).SET(
-		asset.LocationName,
-		asset.Lat,
-		asset.Lon,
-	).WHERE(
-		Asset.ID.EQ(Int(asset.ID)),
-	)
-	_, err := stmt.ExecContext(ctx, GetDB().db)
-	return err
-}
-
-// rework old to new
-func UpdateAssetLocation(ctx context.Context, config appmodel.Configuration, globalAssetID string, assetId int32, providerId string, isRoot bool) error {
-	dbAsset := dbgen.Asset{
-		ConfigurationID: config.Id,
-		GlobalAssetID:   globalAssetID,
-		AssetID:         null.Int32From(assetId),
-		ProviderID:      providerId,
-		IsRoot:          isRoot,
+	count, err := dbgen.Assets(
+		dbgen.AssetWhere.ID.EQ(asset.ID),
+	).UpdateAllG(ctx, dbgen.M{
+		dbgen.AssetColumns.LocationName: asset.LocationName,
+		dbgen.AssetColumns.Lat:          asset.Lat,
+		dbgen.AssetColumns.Lon:          asset.Lon,
+	})
+	if err != nil {
+		return err
 	}
-	return dbAsset.UpsertG(ctx, true, []string{dbgen.AssetColumns.ProviderID}, boil.Blacklist("id"), boil.Infer())
-}
-
-func GetAssetId(ctx context.Context, config appmodel.Configuration, globalAssetID string) (*int32, error) {
-	dbAsset, err := dbgen.Assets(
-		dbgen.AssetWhere.ConfigurationID.EQ(config.Id),
-		dbgen.AssetWhere.GlobalAssetID.EQ(globalAssetID),
-	).AllG(ctx)
-	if err != nil || len(dbAsset) == 0 {
-		return nil, err
+	if count == 0 {
+		return fmt.Errorf("no asset found with ID %d", asset.ID)
 	}
-	return common.Ptr(dbAsset[0].AssetID.Int32), nil
+	return nil
 }
 
 func GetAssetById(assetId int32) (appmodel.Asset, error) {
-	//Not used anywhere, but probably will need to support tenantId if used in future
 	asset, err := dbgen.FindAssetG(context.Background(), int64(assetId))
 	if err != nil {
 		return appmodel.Asset{}, fmt.Errorf("fetching asset: %v", err)
 	}
-	if !asset.AssetID.Valid {
-		return appmodel.Asset{}, fmt.Errorf("shouldn't happen: assetID is nil")
-	}
-	c, err := asset.Configuration().OneG(context.Background())
-	if errors.Is(err, sql.ErrNoRows) {
-		return appmodel.Asset{}, ErrNotFound
-	}
-	if err != nil {
-		return appmodel.Asset{}, fmt.Errorf("fetching configuration: %v", err)
-	}
-	config, err := toAppConfig(c)
-	if err != nil {
-		return appmodel.Asset{}, fmt.Errorf("translating configuration: %v", err)
-	}
-	return toAppAsset(*asset, config), nil
+
+	return toAppAsset(*asset), nil
 }
 
 func GetAssets(ctx context.Context) ([]appmodel.Asset, error) {
-	var assets []model.Asset
-	err := SELECT(
-		Asset.AllColumns,
-	).FROM(
-		Asset,
-	).QueryContext(ctx, GetDB().db, &assets)
-	if errors.Is(err, qrm.ErrNoRows) {
-		return nil, ErrNotFound
-	} else if err != nil {
+	assets, err := dbgen.Assets().AllG(ctx)
+	if err != nil {
 		return nil, fmt.Errorf("fetching assets: %v", err)
 	}
-
 	var appAssets []appmodel.Asset
 	for _, a := range assets {
-		appAssets = append(appAssets, toAppAsset(a))
+		appAssets = append(appAssets, toAppAsset(*a))
 	}
 	return appAssets, nil
+}
 
+func UpsertRootAsset(ctx context.Context, rootAsset appmodel.RootAsset) error {
+	// we assume unique 1 config per 1 tenant
+	dbRootAsset := toDbRootAsset(rootAsset)
+
+	if err := dbRootAsset.UpsertG(ctx, true, []string{"AssetID"}, boil.Blacklist("id"), boil.Infer()); err != nil {
+		return fmt.Errorf("inserting DB rootAsset: %v", err)
+	}
+	return nil
+}
+
+func GetRootAssets() ([]appmodel.RootAsset, error) {
+	rootAssets, err := dbgen.RootAssets().AllG(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("fetching root assets: %v", err)
+	}
+	var appRootAssets []appmodel.RootAsset
+	for _, ra := range rootAssets {
+		appRootAssets = append(appRootAssets, toAppRootAsset(*ra))
+	}
+
+	return appRootAssets, nil
+}
+
+func GetRootAssetId(ctx context.Context, globalAssetID string, config appmodel.Configuration) (*int32, error) {
+	dbRootAsset, err := dbgen.RootAssets(
+		dbgen.RootAssetWhere.Gai.EQ(globalAssetID),
+		dbgen.RootAssetWhere.ConfigurationID.EQ(config.Id),
+	).OneG(ctx)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("getting root asset: %v", err)
+	}
+	return common.Ptr(dbRootAsset.AssetID), nil
+}
+
+func RootAssetAlreadyCreated(tenantId uuid.UUID) (bool, error) {
+	// First get the configuration for this tenant
+	config, err := dbgen.Configurations(
+		dbgen.ConfigurationWhere.TenantID.EQ(tenantId.String()),
+	).OneG(context.Background())
+	if errors.Is(err, sql.ErrNoRows) {
+		// No configuration exists for this tenant, so no root assets either
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("getting configuration for tenant %s: %v", tenantId, err)
+	}
+
+	// Now check if root assets exist for this configuration
+	exists, err := dbgen.RootAssets(
+		dbgen.RootAssetWhere.ConfigurationID.EQ(config.ID),
+	).ExistsG(context.Background())
+	if err != nil {
+		return false, fmt.Errorf("checking if root asset exists for tenant %s: %v", tenantId, err)
+	}
+	return exists, nil
 }
 
 func toDbConfig(ctx context.Context, appConfig appmodel.Configuration) (dbConfig dbgen.Configuration, err error) {
 	dbConfig.TenantID = appConfig.TenantId.String()
 
 	dbConfig.ID = appConfig.Id
-	dbConfig.SiteID = null.StringFrom(appConfig.SiteID)
+	dbConfig.SiteID = null.StringFrom(appConfig.SiteId)
 	dbConfig.RefreshInterval = appConfig.RefreshInterval
 	dbConfig.RequestTimeout = appConfig.RequestTimeout
-	af, err := json.Marshal(appConfig.AssetFilter)
-	if err != nil {
-		return dbgen.Configuration{}, fmt.Errorf("marshalling assetFilter: %v", err)
-	}
-	dbConfig.AssetFilter = af
 	dbConfig.Active = appConfig.Active
 	dbConfig.Enable = appConfig.Enable
 
@@ -307,124 +223,58 @@ func toAppConfig(dbConfig *dbgen.Configuration) (appConfig appmodel.Configuratio
 		return appmodel.Configuration{}, fmt.Errorf("parsing tenant ID as UUID: %v", err)
 	}
 
-	appConfig.ApiKey, apikey_err = app.GetApiKey("demo", GetDB(), tenantUUID)
+	appConfig.ApiKey, apikey_err = app.GetApiKey("weather-app2", GetDB(), tenantUUID)
 	if apikey_err != nil {
 		log.Fatal("conf", "api key not found for tenant %s in DB for: %v", dbConfig.TenantID, apikey_err)
 	}
 
 	appConfig.Id = dbConfig.ID
 	appConfig.TenantId = tenantUUID
-	appConfig.SiteID = dbConfig.SiteID.String
+	appConfig.SiteId = dbConfig.SiteID.String
 	appConfig.Enable = dbConfig.Enable
 	appConfig.RefreshInterval = dbConfig.RefreshInterval
 	appConfig.RequestTimeout = dbConfig.RequestTimeout
-	var af [][]appmodel.FilterRule
-	if err := json.Unmarshal(dbConfig.AssetFilter, &af); err != nil {
-		return appmodel.Configuration{}, fmt.Errorf("unmarshalling assetFilter: %v", err)
-	}
-	appConfig.AssetFilter = af
 	appConfig.Active = dbConfig.Active
 	appConfig.UserId = dbConfig.UserID
 	return appConfig, nil
 }
 
-func toAppAsset(dbAsset dbgen.Asset, config appmodel.Configuration) appmodel.Asset {
+func toAppAsset(dbAsset dbgen.Asset) appmodel.Asset {
 	return appmodel.Asset{
-		ID:            dbAsset.ID,
-		Config:        config,
-		ProjectID:     dbAsset.ProjectID,
-		GlobalAssetID: dbAsset.GlobalAssetID,
-		ProviderID:    dbAsset.ProviderID,
-		AssetID:       dbAsset.AssetID.Int32,
+		ID:           dbAsset.ID,
+		ProjectID:    dbAsset.ProjectID,
+		LocationName: dbAsset.LocationName,
+		Lat:          dbAsset.Lat,
+		Lon:          dbAsset.Lon,
+		AssetID:      dbAsset.AssetID,
 	}
 }
 
-func UpsertRootAsset(assetID int32, projectID, gai string) error {
-	stmt := RootAsset.INSERT(
-		RootAsset.ConfigurationID,
-		RootAsset.Gai,
-		RootAsset.ProjectID,
-		RootAsset.AssetID,
-	).VALUES(
-		1,
-		gai,
-		projectID,
-		assetID,
-	).ON_CONFLICT(
-		RootAsset.AssetID,
-	).DO_NOTHING()
-
-	_, err := stmt.ExecContext(context.Background(), GetDB().db)
-	return err
+func toAppRootAsset(dbRootAsset dbgen.RootAsset) appmodel.RootAsset {
+	return appmodel.RootAsset{
+		ID: dbRootAsset.ID,
+		// config: 	  dbRootAsset.ConfigurationID, // Probably don't need
+		AssetID: dbRootAsset.AssetID,
+	}
 }
 
-func GetRootAssets() ([]appmodel.RootAsset, error) {
-	var assets []model.Asset
-	err := SELECT(
-		RootAsset.AllColumns,
-	).FROM(
-		RootAsset,
-	).Query(GetDB().db, &assets)
+func toDbRootAsset(appRootAsset appmodel.RootAsset) (dbRootAsset dbgen.RootAsset) {
+	dbRootAsset.ID = appRootAsset.ID
+	dbRootAsset.ConfigurationID = appRootAsset.Config.Id
+	dbRootAsset.Gai = appRootAsset.Gai
+	dbRootAsset.AssetID = appRootAsset.AssetID
+
+	return dbRootAsset
+}
+
+func ParseTenantIdFromEnv(ctx context.Context) (uuid.UUID, error) {
+	env := frontend.GetEnvironment(ctx)
+	if env == nil {
+		return uuid.UUID{}, fmt.Errorf("missing environment JWT")
+	}
+	parsed, err := uuid.Parse(env.TenantId)
 	if err != nil {
-		return nil, fmt.Errorf("fetching root assets: %v", err)
+		return uuid.UUID{}, fmt.Errorf("tenant isn't a valid UUID: %s", env.TenantId)
 	}
-
-	appAssets := make([]appmodel.RootAsset, 0, len(assets))
-	for _, asset := range assets {
-		appAssets = append(appAssets, appmodel.RootAsset{
-			ID:      asset.ID,
-			AssetID: asset.AssetID,
-		})
-	}
-	return appAssets, nil
-}
-
-func GetRootAssets(tenantId uuid.UUID) ([]appmodel.Asset, error) {
-	// rework because weather-app2 uses separete db table for root asset
-	assets, err := dbgen.Assets(
-		dbgen.AssetWhere.IsRoot.EQ(true),
-	).AllG(context.Background())
-	if err != nil {
-		return nil, fmt.Errorf("fetching root assets: %v", err)
-	}
-
-	return FilterAssetsByTenant(assets, tenantId)
-}
-
-func GetRootAssetId(ctx context.Context, projectID, gai string) (*int32, error) {
-	var dest struct {
-		ID int32
-	}
-	stmt := RootAsset.SELECT(
-		RootAsset.ID,
-	).WHERE(
-		RootAsset.Gai.EQ(String(gai)).AND(
-			RootAsset.ProjectID.EQ(String(projectID)),
-		),
-	)
-	err := stmt.QueryContext(ctx, GetDB().db, &dest)
-	if errors.Is(err, qrm.ErrNoRows) {
-		return nil, ErrNotFound
-	} else if err != nil {
-		return nil, fmt.Errorf("getting root asset ID: %v", err)
-	}
-
-	return &dest.ID, nil
-}
-
-func RootAssetAlreadyCreated() (bool, error) {
-	var dest struct {
-		ID int32
-	}
-	stmt := RootAsset.SELECT(
-		RootAsset.ID,
-	)
-	err := stmt.QueryContext(context.Background(), GetDB().db, &dest)
-	if errors.Is(err, qrm.ErrNoRows) {
-		return false, nil
-	} else if err != nil {
-		return false, fmt.Errorf("getting root asset: %v", err)
-	}
-
-	return true, nil
+	return parsed, err
 }

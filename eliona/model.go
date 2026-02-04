@@ -17,8 +17,8 @@ package eliona
 
 import (
 	"context"
-	appmodel "weather-app2/app/model"
-	conf "weather-app2/db/helper"
+	appmodel "weather-app2/v2/app/model"
+	conf "weather-app2/v2/db/helper"
 )
 
 type Root struct {
@@ -29,7 +29,7 @@ type Root struct {
 }
 
 func (r *Root) GetName() string {
-	return "weather_app"
+	return "weather_app2"
 }
 
 func (r *Root) GetDescription() string {
@@ -44,12 +44,17 @@ func (r *Root) GetGAI() string {
 	return r.GetAssetType()
 }
 
-func (r *Root) GetAssetID(projectID string) (*int32, error) {
-	return conf.GetRootAssetId(context.Background(), projectID, r.GetGAI())
+func (r *Root) GetAssetID() (*int32, error) {
+	return conf.GetRootAssetId(context.Background(), r.GetGAI(), *r.Config)
 }
 
-func (r *Root) SetAssetID(assetID int32, projectID string) error {
-	return conf.UpsertRootAsset(assetID, projectID, r.GetGAI())
+func (r *Root) SetAssetID(assetID int32) error {
+	rootAsset := appmodel.RootAsset{
+		Config:  *r.Config,
+		AssetID: assetID,
+		Gai:     r.GetGAI(),
+	}
+	return conf.UpsertRootAsset(context.Background(), rootAsset)
 }
 
 func (r *Root) GetLocationalParentGAI() string {
@@ -58,4 +63,7 @@ func (r *Root) GetLocationalParentGAI() string {
 
 func (r *Root) GetFunctionalParentGAI() string {
 	return r.FunctionalParentGAI
+}
+func (r *Root) GetSiteID() string {
+	return r.Config.SiteId
 }

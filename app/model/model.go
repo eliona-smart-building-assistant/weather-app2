@@ -40,5 +40,7 @@ type Asset struct {
 
 type RootAsset struct {
 	ID      int64
+	Config  Configuration
 	AssetID int32
+	Gai     string
 }

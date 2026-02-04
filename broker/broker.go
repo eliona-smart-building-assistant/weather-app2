@@ -21,7 +21,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	appmodel "weather-app2/app/model"
+	appmodel "weather-app2/v2/app/model"
 )
 
 func TestAuthentication(config appmodel.Configuration) error {
