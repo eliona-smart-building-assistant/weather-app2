@@ -254,38 +254,44 @@ func createRootAsset(config *appmodel.Configuration) error {
 
 // ListenForOutputChanges listens to output attribute changes from Eliona. Delete if not needed.
 func ListenForOutputChanges() {
-
-	//configs, err := dbhelper.GetConfigs(context.Background())
-
 	for {
-		outputs, err := eliona.ListenForPropertyChanges()
+		configs, err := dbhelper.GetConfigs(context.Background())
 		if err != nil {
-			log.Error("eliona", "listening for output changes: %v", err)
-			changeAppStatus(statusError)
-			return
+			log.Fatal("app", "couldn't read configs from DB: %v", err)
 		}
 
-		for output := range outputs {
-			if cr := output.ClientReference.Get(); cr != nil && *cr == eliona.ClientReference {
-				continue
-			}
+		for _, config := range configs {
+			log.Debug("app", "Listening for output changes for config: %v", config)
 
-			asset, err := dbhelper.GetAssetById(output.AssetId)
-			if errors.Is(err, dbhelper.ErrNotFound) {
-				handleNewAsset(output, config)
-				triggerReload()
-				continue
-			} else if err != nil {
-				log.Error("dbhelper", "getting asset by assetID %v: %v", output.AssetId, err)
+			outputs, err := eliona.ListenForPropertyChanges()
+			if err != nil {
+				log.Error("eliona", "listening for output changes: %v", err)
 				changeAppStatus(statusError)
 				return
 			}
 
-			handleExistingAsset(output, asset)
-			triggerReload()
-		}
+			for output := range outputs {
+				if cr := output.ClientReference.Get(); cr != nil && *cr == eliona.ClientReference {
+					continue
+				}
 
-		time.Sleep(time.Second * 5)
+				asset, err := dbhelper.GetAssetById(output.AssetId)
+				if errors.Is(err, dbhelper.ErrNotFound) {
+					handleNewAsset(output, config)
+					triggerReload()
+					continue
+				} else if err != nil {
+					log.Error("dbhelper", "getting asset by assetID %v: %v", output.AssetId, err)
+					changeAppStatus(statusError)
+					return
+				}
+
+				handleExistingAsset(output, asset, config)
+				triggerReload()
+			}
+
+			time.Sleep(time.Second * 5)
+		}
 	}
 }
 
@@ -308,13 +314,6 @@ func handleNewAsset(output api.Data, config appmodel.Configuration) {
 		return
 	}
 
-	config, err := dbhelper.GetTenantConfig(context.Background())
-	if err != nil {
-		log.Error("dbhelper", "getting config: %v", err)
-		changeAppStatus(statusError)
-		return
-	}
-
 	location, err := broker.Locate(config, locationName)
 	if err != nil {
 		log.Warn("app", "trying to locate %s: %v", locationName, err)
@@ -328,8 +327,7 @@ func handleNewAsset(output api.Data, config appmodel.Configuration) {
 		return
 	}
 
-	if err := dbhelper.InsertAsset(client.AuthenticationContext(config.ApiKey), config, appmodel.Asset{
-		ProjectID:    elionaAsset.ProjectId,
+	if err := dbhelper.InsertAsset(client.AuthenticationContext(config.ApiKey), appmodel.Asset{
 		AssetID:      elionaAsset.GetId(),
 		LocationName: locationNameFormatted,
 		Lat:          location.Lat,
@@ -339,18 +337,11 @@ func handleNewAsset(output api.Data, config appmodel.Configuration) {
 	}
 }
 
-func handleExistingAsset(output api.Data, asset appmodel.Asset) {
+func handleExistingAsset(output api.Data, asset appmodel.Asset, config appmodel.Configuration) {
 	log.Debug("app", "received data update for known asset %v: %+v", output.AssetId, output)
 
 	locationName, ok := getLocationName(output.Data)
 	if !ok {
-		return
-	}
-
-	config, err := dbhelper.GetTenantConfig(context.Background())
-	if err != nil {
-		log.Error("dbhelper", "getting config: %v", err)
-		changeAppStatus(statusError)
 		return
 	}
 
@@ -367,7 +358,7 @@ func handleExistingAsset(output api.Data, asset appmodel.Asset) {
 		return
 	}
 
-	if err := dbhelper.UpdateAssetLocation(client.AuthenticationContext(), appmodel.Asset{
+	if err := dbhelper.UpdateAssetLocation(client.AuthenticationContext(config.ApiKey), appmodel.Asset{
 		ID:           asset.ID,
 		LocationName: locationNameFormatted,
 		Lat:          location.Lat,
