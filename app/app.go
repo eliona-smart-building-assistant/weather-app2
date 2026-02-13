@@ -27,7 +27,7 @@ import (
 	apiservices "weather-app2/v2/api/services"
 	appmodel "weather-app2/v2/app/model"
 	"weather-app2/v2/broker"
-	dbhelper "weather-app2/v2/db/helper"
+	dbhelper "weather-app2/v2/db"
 	"weather-app2/v2/eliona"
 
 	api "github.com/eliona-smart-building-assistant/go-eliona-api-client/v3"

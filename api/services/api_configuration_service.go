@@ -23,7 +23,7 @@ import (
 	apiserver "weather-app2/v2/api/generated"
 	appmodel "weather-app2/v2/app/model"
 	"weather-app2/v2/broker"
-	dbhelper "weather-app2/v2/db/helper"
+	dbhelper "weather-app2/v2/db"
 
 	"github.com/google/uuid"
 )

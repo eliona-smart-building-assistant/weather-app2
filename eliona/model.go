@@ -18,7 +18,7 @@ package eliona
 import (
 	"context"
 	appmodel "weather-app2/v2/app/model"
-	conf "weather-app2/v2/db/helper"
+	conf "weather-app2/v2/db"
 )
 
 type Root struct {

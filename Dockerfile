@@ -28,9 +28,17 @@ RUN DATE=$(date) && \
 
 FROM eliona/base-alpine:latest AS target
 
+# Install SQLite runtime library
+RUN apk add --no-cache sqlite-libs
+
 COPY --from=build /app-build ./
 COPY resources/ ./resources/
 COPY openapi.yaml ./
 
+# Create data directory for SQLite database
+RUN mkdir -p /data && chmod 777 /data
+
 ENV TZ=Europe/Zurich
+ENV DATABASE_PATH=/data/weather_app2.db
+
 CMD [ "/app-build" ]
