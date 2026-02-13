@@ -63,7 +63,7 @@ func openDB() *sql.DB {
 		}
 	}
 
-	db, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=1")
+	db, err := sql.Open("sqlite", dbPath+"?_foreign_keys=1")
 	if err != nil {
 		log.Fatal("Database", "Cannot open SQLite database: %v", err)
 	}
